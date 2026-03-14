@@ -1,0 +1,13 @@
+# Secrets
+.env
+
+# .NET
+api/bin/
+api/obj/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude memory (local only)
+.claude/

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rate Matcha 🍵 — Toronto's Matcha Community</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container nav-inner">
+      <a href="/" class="nav-brand">🍵 Rate Matcha</a>
+      <div class="nav-tabs" id="navTabs">
+        <button class="nav-tab active" data-view="home">Discover</button>
+        <button class="nav-tab" data-view="favourites" id="tabFavourites" style="display:none">Favourites</button>
+        <button class="nav-tab" data-view="myreviews" id="tabMyReviews" style="display:none">My Reviews</button>
+      </div>
+      <div class="nav-auth" id="navAuth">
+        <button class="btn btn-outline" id="btnLogin">Log In</button>
+        <button class="btn btn-primary" id="btnRegister">Sign Up</button>
+      </div>
+      <div class="nav-user" id="navUser" style="display:none">
+        <span class="user-greeting" id="userGreeting"></span>
+        <button class="btn btn-outline btn-sm" id="btnLogout">Log Out</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main>
+    <!-- Home / Discover view -->
+    <div id="viewHome">
+      <section class="hero">
+        <div class="container">
+          <h1>Find Your Perfect Matcha</h1>
+          <p>Toronto's community guide to the best matcha spots — rated by matcha lovers, for matcha lovers.</p>
+          <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search matcha spots in Toronto…" />
+            <button class="btn btn-primary" id="btnSearch">Search</button>
+            <button class="btn btn-outline" id="btnLocation" title="Use my location">📍 Near Me</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="places-section">
+        <div class="container">
+          <div class="section-header">
+            <h2 id="placesTitle">Matcha Spots</h2>
+            <span class="places-count" id="placesCount"></span>
+          </div>
+          <div class="places-grid" id="placesGrid">
+            <div class="loading-spinner"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Favourites view -->
+    <div id="viewFavourites" style="display:none">
+      <section class="places-section" style="padding-top: calc(var(--nav-height) + 2rem)">
+        <div class="container">
+          <div class="section-header">
+            <h2>My Favourites</h2>
+          </div>
+          <div class="places-grid" id="favsGrid"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- My Reviews view -->
+    <div id="viewMyReviews" style="display:none">
+      <section class="places-section" style="padding-top: calc(var(--nav-height) + 2rem)">
+        <div class="container">
+          <div class="section-header">
+            <h2>My Reviews</h2>
+          </div>
+          <div id="myReviewsList"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Place detail modal -->
+  <div class="modal-overlay" id="placeModal" style="display:none">
+    <div class="modal">
+      <button class="modal-close" id="closePlaceModal">✕</button>
+      <div id="placeModalContent"></div>
+    </div>
+  </div>
+
+  <!-- Login modal -->
+  <div class="modal-overlay" id="loginModal" style="display:none">
+    <div class="modal modal-sm">
+      <button class="modal-close" id="closeLoginModal">✕</button>
+      <h2>Welcome Back 🍵</h2>
+      <form id="loginForm">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="loginEmail" required placeholder="you@example.com" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPassword" required placeholder="••••••••" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Log In</button>
+      </form>
+      <p class="modal-switch">Don't have an account? <a href="#" id="switchToRegister">Sign up</a></p>
+    </div>
+  </div>
+
+  <!-- Register modal -->
+  <div class="modal-overlay" id="registerModal" style="display:none">
+    <div class="modal modal-sm">
+      <button class="modal-close" id="closeRegisterModal">✕</button>
+      <h2>Join Rate Matcha 🍵</h2>
+      <form id="registerForm">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="regName" required placeholder="Your name" />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="regEmail" required placeholder="you@example.com" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="regPassword" required placeholder="Min. 8 characters" minlength="8" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+      </form>
+      <p class="modal-switch">Already have an account? <a href="#" id="switchToLogin">Log in</a></p>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toastContainer"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

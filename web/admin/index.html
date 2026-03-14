@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rate Matcha — Admin</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body { background: #f4f6f8; }
+
+    /* Admin Layout */
+    .admin-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .admin-sidebar {
+      width: 220px;
+      background: var(--matcha-dark);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 50;
+    }
+
+    .admin-sidebar-brand {
+      padding: 1.5rem 1.25rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .admin-sidebar-brand h1 {
+      font-size: 1.1rem;
+      color: #fff;
+      font-weight: 800;
+      margin-bottom: 0.25rem;
+    }
+
+    .admin-sidebar-brand p {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .admin-nav {
+      flex: 1;
+      padding: 1rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .admin-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.625rem 0.875rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: rgba(255,255,255,0.75);
+      font-size: 0.875rem;
+      font-weight: 500;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      transition: all var(--transition);
+    }
+
+    .admin-nav-item:hover {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+
+    .admin-nav-item.active {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .admin-nav-item .nav-icon { font-size: 1.1rem; }
+
+    .admin-sidebar-footer {
+      padding: 1rem 0.75rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .admin-main {
+      margin-left: 220px;
+      flex: 1;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    .admin-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.75rem;
+    }
+
+    .admin-header h2 {
+      font-size: 1.5rem;
+      color: var(--text);
+    }
+
+    /* Login Screen */
+    #loginScreen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--matcha-dark), var(--matcha));
+    }
+
+    .login-box {
+      background: #fff;
+      border-radius: var(--radius-lg);
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .login-box h1 {
+      font-size: 1.5rem;
+      margin-bottom: 0.375rem;
+      color: var(--matcha-dark);
+    }
+
+    .login-box p { margin-bottom: 1.5rem; font-size: 0.875rem; }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .toolbar input, .toolbar select {
+      padding: 0.5rem 0.875rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-family: inherit;
+      outline: none;
+      color: var(--text);
+      background: #fff;
+      transition: border-color var(--transition);
+    }
+
+    .toolbar input:focus, .toolbar select:focus {
+      border-color: var(--matcha);
+    }
+
+    .toolbar input { flex: 1; min-width: 180px; }
+
+    /* Pagination */
+    .table-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 1rem;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .page-controls {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-green { background: #dcfce7; color: #15803d; }
+    .badge-red { background: #fee2e2; color: #dc2626; }
+    .badge-gray { background: #f3f4f6; color: #6b7280; }
+
+    /* Recent reviews table in overview */
+    .overview-section { margin-top: 1.5rem; }
+    .overview-section h3 { margin-bottom: 1rem; font-size: 1.05rem; }
+
+    /* Truncate long text */
+    .truncate {
+      max-width: 220px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    @media (max-width: 768px) {
+      .admin-sidebar { display: none; }
+      .admin-main { margin-left: 0; padding: 1rem; }
+      .stat-cards { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="loginScreen">
+  <div class="login-box">
+    <h1>🍵 Admin Panel</h1>
+    <p>Rate Matcha administration dashboard</p>
+    <form id="adminLoginForm">
+      <div class="form-group">
+        <label>Admin Email</label>
+        <input type="email" id="adminEmail" required placeholder="admin@matchaapp.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="adminPassword" required placeholder="••••••••" />
+      </div>
+      <div id="loginError" style="color:#dc2626;font-size:0.875rem;margin-bottom:0.75rem;display:none"></div>
+      <button type="submit" class="btn btn-primary btn-full" id="loginBtn">Sign In</button>
+    </form>
+    <p style="margin-top:1rem;text-align:center;font-size:0.8rem">
+      <a href="/" style="color:var(--matcha)">← Back to site</a>
+    </p>
+  </div>
+</div>
+
+<!-- Admin Dashboard -->
+<div id="adminDashboard" style="display:none">
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-brand">
+        <h1>🍵 Rate Matcha</h1>
+        <p>Admin Dashboard</p>
+      </div>
+      <nav class="admin-nav">
+        <button class="admin-nav-item active" data-tab="overview">
+          <span class="nav-icon">📊</span> Overview
+        </button>
+        <button class="admin-nav-item" data-tab="users">
+          <span class="nav-icon">👥</span> Users
+        </button>
+        <button class="admin-nav-item" data-tab="reviews">
+          <span class="nav-icon">⭐</span> Reviews
+        </button>
+        <button class="admin-nav-item" data-tab="places">
+          <span class="nav-icon">📍</span> Places
+        </button>
+      </nav>
+      <div class="admin-sidebar-footer">
+        <button class="admin-nav-item" id="adminLogoutBtn" style="color:rgba(255,200,200,0.8)">
+          <span class="nav-icon">🚪</span> Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+      <!-- Overview Tab -->
+      <div id="tabOverview">
+        <div class="admin-header">
+          <h2>Overview</h2>
+          <button class="btn btn-outline btn-sm" id="refreshStatsBtn">↻ Refresh</button>
+        </div>
+        <div class="stat-cards" id="statCards">
+          <div class="stat-card"><div class="stat-card-value">—</div><div class="stat-card-label">Users</div></div>
+          <div class="stat-card"><div class="stat-card-value">—</div><div class="stat-card-label">Places</div></div>
+          <div class="stat-card"><div class="stat-card-value">—</div><div class="stat-card-label">Total Reviews</div></div>
+          <div class="stat-card"><div class="stat-card-value">—</div><div class="stat-card-label">Published</div></div>
+          <div class="stat-card"><div class="stat-card-value">—</div><div class="stat-card-label">Hidden</div></div>
+        </div>
+        <div class="overview-section">
+          <h3>Recent Reviews</h3>
+          <div class="admin-table-wrap">
+            <table class="admin-table" id="recentReviewsTable">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Place</th>
+                  <th>Rating</th>
+                  <th>Review</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="recentReviewsBody">
+                <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-light)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users Tab -->
+      <div id="tabUsers" style="display:none">
+        <div class="admin-header">
+          <h2>Users</h2>
+        </div>
+        <div class="toolbar">
+          <input type="text" id="userSearch" placeholder="Search by name or email…" />
+          <button class="btn btn-primary btn-sm" id="userSearchBtn">Search</button>
+        </div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Reviews</th>
+                <th>Joined</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-light)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span id="usersTotalLabel"></span>
+          <div class="page-controls">
+            <button class="btn btn-outline btn-sm" id="usersPrevPage" disabled>← Prev</button>
+            <span id="usersPageLabel">Page 1</span>
+            <button class="btn btn-outline btn-sm" id="usersNextPage">Next →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reviews Tab -->
+      <div id="tabReviews" style="display:none">
+        <div class="admin-header">
+          <h2>Reviews</h2>
+        </div>
+        <div class="toolbar">
+          <input type="text" id="reviewSearch" placeholder="Search reviews…" />
+          <select id="reviewStatusFilter">
+            <option value="">All statuses</option>
+            <option value="published">Published</option>
+            <option value="hidden">Hidden</option>
+          </select>
+          <button class="btn btn-primary btn-sm" id="reviewSearchBtn">Search</button>
+        </div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Place</th>
+                <th>Rating</th>
+                <th>Review</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="reviewsTableBody">
+              <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-light)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span id="reviewsTotalLabel"></span>
+          <div class="page-controls">
+            <button class="btn btn-outline btn-sm" id="reviewsPrevPage" disabled>← Prev</button>
+            <span id="reviewsPageLabel">Page 1</span>
+            <button class="btn btn-outline btn-sm" id="reviewsNextPage">Next →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Places Tab -->
+      <div id="tabPlaces" style="display:none">
+        <div class="admin-header">
+          <h2>Places</h2>
+        </div>
+        <div class="toolbar">
+          <input type="text" id="placeSearch" placeholder="Search places…" />
+          <button class="btn btn-primary btn-sm" id="placeSearchBtn">Search</button>
+        </div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Address</th>
+                <th>Avg Rating</th>
+                <th>Reviews</th>
+                <th>Cached At</th>
+              </tr>
+            </thead>
+            <tbody id="placesTableBody">
+              <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-light)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span id="placesTotalLabel"></span>
+          <div class="page-controls">
+            <button class="btn btn-outline btn-sm" id="placesPrevPage" disabled>← Prev</button>
+            <span id="placesPageLabel">Page 1</span>
+            <button class="btn btn-outline btn-sm" id="placesNextPage">Next →</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toastContainer"></div>
+
+<script>
+/* =============================================
+   Admin Dashboard JavaScript
+   ============================================= */
+
+const ADMIN_TOKEN_KEY = 'matcha_admin_token';
+const BASE = '/api';
+
+let adminToken = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
+
+// Pagination state
+const state = {
+  users: { page: 1, total: 0, q: '' },
+  reviews: { page: 1, total: 0, q: '', status: '' },
+  places: { page: 1, total: 0, q: '' },
+};
+
+// =============================================
+// Toast
+// =============================================
+function showToast(msg, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('hiding');
+    setTimeout(() => toast.remove(), 200);
+  }, 3500);
+}
+
+// =============================================
+// Utility
+// =============================================
+function escHtml(str) {
+  if (!str && str !== 0) return '—';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function renderStars(rating) {
+  if (!rating) return '<span style="color:var(--text-light)">—</span>';
+  let s = '';
+  for (let i = 1; i <= 5; i++) s += i <= Math.round(rating) ? '★' : '☆';
+  return `<span style="color:#f59e0b">${s}</span>`;
+}
+
+function statusBadge(status) {
+  const cls = status === 'published' ? 'badge-green' : 'badge-red';
+  return `<span class="badge ${cls}">${status}</span>`;
+}
+
+async function apiGet(path) {
+  const res = await fetch(BASE + path, { headers: { Authorization: `Bearer ${adminToken}` } });
+  return res.json();
+}
+
+async function apiDelete(path) {
+  return fetch(BASE + path, { method: 'DELETE', headers: { Authorization: `Bearer ${adminToken}` } });
+}
+
+async function apiPatch(path, body) {
+  return fetch(BASE + path, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify(body)
+  });
+}
+
+// =============================================
+// Login
+// =============================================
+document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('adminEmail').value.trim();
+  const password = document.getElementById('adminPassword').value;
+  const btn = document.getElementById('loginBtn');
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+
+  try {
+    const res = await fetch(BASE + '/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+    adminToken = data.token;
+    localStorage.setItem(ADMIN_TOKEN_KEY, adminToken);
+    showDashboard();
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  }
+});
+
+function showDashboard() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('adminDashboard').style.display = '';
+  loadStats();
+  loadRecentReviews();
+}
+
+function showLogin() {
+  document.getElementById('loginScreen').style.display = '';
+  document.getElementById('adminDashboard').style.display = 'none';
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+  adminToken = '';
+}
+
+document.getElementById('adminLogoutBtn').addEventListener('click', () => {
+  showLogin();
+  showToast('Logged out', 'info');
+});
+
+// =============================================
+// Tab Navigation
+// =============================================
+document.querySelectorAll('.admin-nav-item[data-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.admin-nav-item[data-tab]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['Overview', 'Users', 'Reviews', 'Places'].forEach(t => {
+      document.getElementById(`tab${t}`).style.display = t.toLowerCase() === tab ? '' : 'none';
+    });
+    if (tab === 'users') loadUsers();
+    if (tab === 'reviews') loadReviews();
+    if (tab === 'places') loadPlaces();
+  });
+});
+
+// =============================================
+// Overview — Stats
+// =============================================
+async function loadStats() {
+  try {
+    const data = await apiGet('/admin/stats');
+    const cards = document.getElementById('statCards');
+    cards.innerHTML = `
+      <div class="stat-card"><div class="stat-card-value">${data.totalUsers ?? 0}</div><div class="stat-card-label">Users</div></div>
+      <div class="stat-card"><div class="stat-card-value">${data.totalPlaces ?? 0}</div><div class="stat-card-label">Places</div></div>
+      <div class="stat-card"><div class="stat-card-value">${data.totalReviews ?? 0}</div><div class="stat-card-label">Total Reviews</div></div>
+      <div class="stat-card"><div class="stat-card-value" style="color:var(--matcha)">${data.publishedReviews ?? 0}</div><div class="stat-card-label">Published</div></div>
+      <div class="stat-card"><div class="stat-card-value" style="color:#dc2626">${data.hiddenReviews ?? 0}</div><div class="stat-card-label">Hidden</div></div>
+    `;
+  } catch (err) {
+    showToast('Failed to load stats: ' + err.message, 'error');
+  }
+}
+
+async function loadRecentReviews() {
+  try {
+    const data = await apiGet('/admin/reviews?page=1&pageSize=10');
+    const tbody = document.getElementById('recentReviewsBody');
+    if (!data.items || data.items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-light)">No reviews yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.items.map(r => `
+      <tr>
+        <td>${escHtml(r.userName)}</td>
+        <td class="text-secondary">${escHtml(r.placeName)}</td>
+        <td>${renderStars(r.rating)}</td>
+        <td><span class="truncate" title="${escHtml(r.body)}">${escHtml(r.body)}</span></td>
+        <td>${statusBadge(r.status)}</td>
+        <td class="text-muted">${fmtDate(r.createdAt)}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    showToast('Failed to load recent reviews', 'error');
+  }
+}
+
+document.getElementById('refreshStatsBtn').addEventListener('click', () => {
+  loadStats();
+  loadRecentReviews();
+  showToast('Stats refreshed', 'success');
+});
+
+// =============================================
+// Users Tab
+// =============================================
+async function loadUsers() {
+  const tbody = document.getElementById('usersTableBody');
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-light)">Loading…</td></tr>';
+
+  try {
+    const params = new URLSearchParams({ page: state.users.page, pageSize: 20 });
+    if (state.users.q) params.append('q', state.users.q);
+    const data = await apiGet(`/admin/users?${params}`);
+    state.users.total = data.total;
+
+    document.getElementById('usersTotalLabel').textContent = `${data.total} user${data.total !== 1 ? 's' : ''}`;
+    document.getElementById('usersPageLabel').textContent = `Page ${state.users.page} of ${Math.max(1, Math.ceil(data.total / 20))}`;
+    document.getElementById('usersPrevPage').disabled = state.users.page <= 1;
+    document.getElementById('usersNextPage').disabled = state.users.page >= Math.ceil(data.total / 20);
+
+    if (!data.items || data.items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-light)">No users found</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.items.map(u => `
+      <tr id="user-row-${u.id}">
+        <td><strong>${escHtml(u.name)}</strong></td>
+        <td class="text-secondary">${escHtml(u.email)}</td>
+        <td>${u.reviewCount}</td>
+        <td class="text-muted">${fmtDate(u.createdAt)}</td>
+        <td>
+          <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}', '${escHtml(u.name)}')">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#dc2626;padding:1rem">${escHtml(err.message)}</td></tr>`;
+  }
+}
+
+async function deleteUser(id, name) {
+  if (!confirm(`Delete user "${name}" and all their reviews? This cannot be undone.`)) return;
+  try {
+    const res = await apiDelete(`/admin/users/${id}`);
+    if (res.status === 204) {
+      document.getElementById(`user-row-${id}`)?.remove();
+      showToast('User deleted', 'success');
+      loadStats();
+    } else {
+      showToast('Failed to delete user', 'error');
+    }
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+document.getElementById('userSearchBtn').addEventListener('click', () => {
+  state.users.q = document.getElementById('userSearch').value.trim();
+  state.users.page = 1;
+  loadUsers();
+});
+
+document.getElementById('userSearch').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('userSearchBtn').click();
+});
+
+document.getElementById('usersPrevPage').addEventListener('click', () => {
+  if (state.users.page > 1) { state.users.page--; loadUsers(); }
+});
+
+document.getElementById('usersNextPage').addEventListener('click', () => {
+  if (state.users.page < Math.ceil(state.users.total / 20)) { state.users.page++; loadUsers(); }
+});
+
+// =============================================
+// Reviews Tab
+// =============================================
+async function loadReviews() {
+  const tbody = document.getElementById('reviewsTableBody');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-light)">Loading…</td></tr>';
+
+  try {
+    const params = new URLSearchParams({ page: state.reviews.page, pageSize: 20 });
+    if (state.reviews.q) params.append('q', state.reviews.q);
+    if (state.reviews.status) params.append('status', state.reviews.status);
+    const data = await apiGet(`/admin/reviews?${params}`);
+    state.reviews.total = data.total;
+
+    document.getElementById('reviewsTotalLabel').textContent = `${data.total} review${data.total !== 1 ? 's' : ''}`;
+    document.getElementById('reviewsPageLabel').textContent = `Page ${state.reviews.page} of ${Math.max(1, Math.ceil(data.total / 20))}`;
+    document.getElementById('reviewsPrevPage').disabled = state.reviews.page <= 1;
+    document.getElementById('reviewsNextPage').disabled = state.reviews.page >= Math.ceil(data.total / 20);
+
+    if (!data.items || data.items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-light)">No reviews found</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.items.map(r => `
+      <tr id="review-row-${r.id}">
+        <td>${escHtml(r.userName)}</td>
+        <td class="text-secondary">${escHtml(r.placeName)}</td>
+        <td>${renderStars(r.rating)} <span style="font-size:0.8rem;color:var(--text-secondary)">${r.rating}</span></td>
+        <td><span class="truncate" title="${escHtml(r.body)}">${escHtml(r.body)}</span></td>
+        <td id="review-status-${r.id}">${statusBadge(r.status)}</td>
+        <td class="text-muted">${fmtDate(r.createdAt)}</td>
+        <td>
+          <button class="btn btn-sm ${r.status === 'published' ? 'btn-outline' : 'btn-primary'}"
+            onclick="toggleReviewStatus('${r.id}', '${r.status}')">
+            ${r.status === 'published' ? 'Hide' : 'Publish'}
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#dc2626;padding:1rem">${escHtml(err.message)}</td></tr>`;
+  }
+}
+
+async function toggleReviewStatus(id, currentStatus) {
+  const newStatus = currentStatus === 'published' ? 'hidden' : 'published';
+  try {
+    const res = await apiPatch(`/admin/reviews/${id}/status`, { status: newStatus });
+    const data = await res.json();
+    if (data.status) {
+      const row = document.getElementById(`review-row-${id}`);
+      if (row) {
+        row.querySelector(`#review-status-${id}`).innerHTML = statusBadge(data.status);
+        const actionBtn = row.querySelector('button[onclick]');
+        if (actionBtn) {
+          actionBtn.className = `btn btn-sm ${data.status === 'published' ? 'btn-outline' : 'btn-primary'}`;
+          actionBtn.textContent = data.status === 'published' ? 'Hide' : 'Publish';
+          actionBtn.setAttribute('onclick', `toggleReviewStatus('${id}', '${data.status}')`);
+        }
+      }
+      showToast(`Review ${newStatus}`, 'success');
+      loadStats();
+    }
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+document.getElementById('reviewSearchBtn').addEventListener('click', () => {
+  state.reviews.q = document.getElementById('reviewSearch').value.trim();
+  state.reviews.status = document.getElementById('reviewStatusFilter').value;
+  state.reviews.page = 1;
+  loadReviews();
+});
+
+document.getElementById('reviewSearch').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('reviewSearchBtn').click();
+});
+
+document.getElementById('reviewStatusFilter').addEventListener('change', () => {
+  document.getElementById('reviewSearchBtn').click();
+});
+
+document.getElementById('reviewsPrevPage').addEventListener('click', () => {
+  if (state.reviews.page > 1) { state.reviews.page--; loadReviews(); }
+});
+
+document.getElementById('reviewsNextPage').addEventListener('click', () => {
+  if (state.reviews.page < Math.ceil(state.reviews.total / 20)) { state.reviews.page++; loadReviews(); }
+});
+
+// =============================================
+// Places Tab
+// =============================================
+async function loadPlaces() {
+  const tbody = document.getElementById('placesTableBody');
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-light)">Loading…</td></tr>';
+
+  try {
+    const params = new URLSearchParams({ page: state.places.page, pageSize: 20 });
+    if (state.places.q) params.append('q', state.places.q);
+    const data = await apiGet(`/admin/places?${params}`);
+    state.places.total = data.total;
+
+    document.getElementById('placesTotalLabel').textContent = `${data.total} place${data.total !== 1 ? 's' : ''}`;
+    document.getElementById('placesPageLabel').textContent = `Page ${state.places.page} of ${Math.max(1, Math.ceil(data.total / 20))}`;
+    document.getElementById('placesPrevPage').disabled = state.places.page <= 1;
+    document.getElementById('placesNextPage').disabled = state.places.page >= Math.ceil(data.total / 20);
+
+    if (!data.items || data.items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-light)">No places found</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.items.map(p => `
+      <tr>
+        <td><strong>${escHtml(p.name)}</strong></td>
+        <td class="text-secondary">${escHtml(p.address)}</td>
+        <td>${p.averageRating ? `${renderStars(p.averageRating)} <span style="font-size:0.8rem">${p.averageRating}</span>` : '<span style="color:var(--text-light)">No ratings</span>'}</td>
+        <td>${p.reviewCount}</td>
+        <td class="text-muted">${fmtDate(p.cachedAt)}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#dc2626;padding:1rem">${escHtml(err.message)}</td></tr>`;
+  }
+}
+
+document.getElementById('placeSearchBtn').addEventListener('click', () => {
+  state.places.q = document.getElementById('placeSearch').value.trim();
+  state.places.page = 1;
+  loadPlaces();
+});
+
+document.getElementById('placeSearch').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('placeSearchBtn').click();
+});
+
+document.getElementById('placesPrevPage').addEventListener('click', () => {
+  if (state.places.page > 1) { state.places.page--; loadPlaces(); }
+});
+
+document.getElementById('placesNextPage').addEventListener('click', () => {
+  if (state.places.page < Math.ceil(state.places.total / 20)) { state.places.page++; loadPlaces(); }
+});
+
+// =============================================
+// Init
+// =============================================
+if (adminToken) {
+  showDashboard();
+} else {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('adminDashboard').style.display = 'none';
+}
+</script>
+</body>
+</html>
