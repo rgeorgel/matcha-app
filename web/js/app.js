@@ -157,6 +157,7 @@ const App = (() => {
                 updateNavAuth();
                 await loadFavouriteIds();
                 showToast(`Welcome back, ${res.name}!`, 'success');
+                gtag('event', 'login', { method: 'email' });
                 document.getElementById('loginForm').reset();
             } catch (err) {
                 showToast(err.message, 'error');
@@ -186,6 +187,7 @@ const App = (() => {
                 updateNavAuth();
                 await loadFavouriteIds();
                 showToast(`Welcome to Rate Matcha, ${res.name}!`, 'success');
+                gtag('event', 'sign_up', { method: 'email' });
                 document.getElementById('registerForm').reset();
             } catch (err) {
                 showToast(err.message, 'error');
@@ -258,6 +260,7 @@ const App = (() => {
                     favBtn.textContent = '🤍';
                     favBtn.title = 'Add to favourites';
                     showToast('Removed from favourites', 'info');
+                    gtag('event', 'remove_from_wishlist', { item_id: id });
                 } else {
                     await API.addFavourite(id);
                     favouriteIds.add(id);
@@ -265,6 +268,7 @@ const App = (() => {
                     favBtn.textContent = '❤️';
                     favBtn.title = 'Remove from favourites';
                     showToast('Added to favourites!', 'success');
+                    gtag('event', 'add_to_wishlist', { item_id: id });
                 }
             } catch (err) {
                 showToast(err.message, 'error');
@@ -288,6 +292,7 @@ const App = (() => {
             const places = await API.searchPlaces(query, lat, lng);
             grid.innerHTML = '';
             countEl.textContent = `${places.length} spot${places.length !== 1 ? 's' : ''}`;
+            if (query) gtag('event', 'search', { search_term: query, results_count: places.length });
 
             if (places.length === 0) {
                 grid.innerHTML = `
@@ -337,6 +342,7 @@ const App = (() => {
                     locBtn.disabled = false;
                     locBtn.textContent = '📍 Near Me';
                     showToast('Location found! Showing nearby spots.', 'success');
+                    gtag('event', 'use_location_search');
                     searchPlaces(input.value.trim() || 'matcha', userLocation.lat, userLocation.lng);
                 },
                 () => {
@@ -366,6 +372,7 @@ const App = (() => {
                 API.getPlaceReviews(placeId, 1)
             ]);
             reviewTotal = reviewsData.total;
+            gtag('event', 'view_item', { item_id: place.id, item_name: place.name, item_category: 'matcha_place' });
 
             const isFav = favouriteIds.has(place.id);
             const ratingHtml = place.averageRating
@@ -422,12 +429,14 @@ const App = (() => {
                         btn.className = 'btn btn-primary btn-sm';
                         btn.textContent = '🤍 Add to Favourites';
                         showToast('Removed from favourites', 'info');
+                        gtag('event', 'remove_from_wishlist', { item_id: place.id, item_name: place.name });
                     } else {
                         await API.addFavourite(place.id);
                         favouriteIds.add(place.id);
                         btn.className = 'btn btn-outline btn-sm';
                         btn.textContent = '❤️ In Favourites';
                         showToast('Added to favourites!', 'success');
+                        gtag('event', 'add_to_wishlist', { item_id: place.id, item_name: place.name });
                     }
                 } catch (err) {
                     showToast(err.message, 'error');
@@ -552,6 +561,7 @@ const App = (() => {
                 await API.createReview(placeId, selectedRating, body);
                 userReviewedPlaces.add(placeId);
                 showToast('Review submitted!', 'success');
+                gtag('event', 'submit_review', { place_id: placeId, rating: selectedRating });
 
                 // Reload reviews
                 const data = await API.getPlaceReviews(placeId, 1);
