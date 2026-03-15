@@ -11,7 +11,7 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "5432:5432"
+      - "8098:5432"
 
   api:
     build: ./api
@@ -23,8 +23,8 @@ services:
       Jwt__Audience: ${JWT_AUDIENCE}
       Admin__Email: ${ADMIN_EMAIL}
       Admin__Password: ${ADMIN_PASSWORD}
-    ports:
-      - "5000:5000"
+#    ports:
+#      - "5000:5000"
     depends_on:
       - db
 
