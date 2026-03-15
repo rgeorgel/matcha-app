@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS places (
     lat DOUBLE PRECISION,
     lng DOUBLE PRECISION,
     image_url TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
     cached_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

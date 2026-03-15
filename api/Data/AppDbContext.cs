@@ -36,6 +36,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.Lat).HasColumnName("lat");
             e.Property(x => x.Lng).HasColumnName("lng");
             e.Property(x => x.ImageUrl).HasColumnName("image_url");
+            e.Property(x => x.Status).HasColumnName("status").HasDefaultValue("active");
             e.Property(x => x.CachedAt).HasColumnName("cached_at");
         });
 

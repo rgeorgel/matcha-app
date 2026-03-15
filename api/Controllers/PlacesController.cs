@@ -34,11 +34,13 @@ public class PlacesController : ControllerBase
 
         var ratingMap = ratings.ToDictionary(r => r.PlaceId, r => (r.Avg, r.Count));
 
-        var result = places.Select(p =>
-        {
-            var (avg, count) = ratingMap.TryGetValue(p.Id, out var r) ? r : (0, 0);
-            return new PlaceDto(p.Id, p.Name, p.Address, p.Lat, p.Lng, p.ImageUrl, count > 0 ? Math.Round(avg, 1) : null, count);
-        }).ToList();
+        var result = places
+            .Where(p => p.Status == "active")
+            .Select(p =>
+            {
+                var (avg, count) = ratingMap.TryGetValue(p.Id, out var r) ? r : (0, 0);
+                return new PlaceDto(p.Id, p.Name, p.Address, p.Lat, p.Lng, p.ImageUrl, count > 0 ? Math.Round(avg, 1) : null, count);
+            }).ToList();
 
         return Ok(result);
     }
@@ -47,7 +49,7 @@ public class PlacesController : ControllerBase
     public async Task<IActionResult> GetPlace(Guid id)
     {
         var place = await _db.Places.FindAsync(id);
-        if (place == null) return NotFound();
+        if (place == null || place.Status == "hidden") return NotFound();
 
         var reviews = await _db.Reviews.Where(r => r.PlaceId == id && r.Status == "published").ToListAsync();
         var avg = reviews.Count > 0 ? Math.Round(reviews.Average(r => (double)r.Rating), 1) : (double?)null;

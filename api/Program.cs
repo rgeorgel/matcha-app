@@ -52,6 +52,10 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
+    // Add columns introduced after initial schema (idempotent)
+    db.Database.ExecuteSqlRaw(@"
+        ALTER TABLE places ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active';
+    ");
 }
 
 app.UseSwagger();

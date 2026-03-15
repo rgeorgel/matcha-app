@@ -9,6 +9,7 @@ public class Place
     public double? Lat { get; set; }
     public double? Lng { get; set; }
     public string? ImageUrl { get; set; }
+    public string Status { get; set; } = "active";
     public DateTime CachedAt { get; set; }
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
     public ICollection<Favourite> Favourites { get; set; } = new List<Favourite>();

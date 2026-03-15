@@ -387,6 +387,11 @@
         </div>
         <div class="toolbar">
           <input type="text" id="placeSearch" placeholder="Search places…" />
+          <select id="placeStatusFilter">
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="hidden">Hidden</option>
+          </select>
           <button class="btn btn-primary btn-sm" id="placeSearchBtn">Search</button>
         </div>
         <div class="admin-table-wrap">
@@ -398,8 +403,8 @@
                 <th>Image</th>
                 <th>Avg Rating</th>
                 <th>Reviews</th>
-                <th>Cached At</th>
-                <th>Action</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="placesTableBody">
@@ -441,6 +446,44 @@
   </div>
 </div>
 
+<!-- Place Edit Modal -->
+<div id="placeEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:2rem;width:100%;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;max-height:90vh;overflow-y:auto">
+    <button onclick="closePlaceEditModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.25rem;cursor:pointer;color:#6b7280">✕</button>
+    <h3 style="margin-bottom:1.5rem;font-size:1.1rem">Edit Place</h3>
+    <input type="hidden" id="editPlaceId" />
+    <div class="form-group">
+      <label>Name <span style="color:#dc2626">*</span></label>
+      <input type="text" id="editPlaceName" style="width:100%;padding:0.625rem 0.875rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:inherit;outline:none;box-sizing:border-box" />
+    </div>
+    <div class="form-group">
+      <label>Address</label>
+      <input type="text" id="editPlaceAddress" style="width:100%;padding:0.625rem 0.875rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:inherit;outline:none;box-sizing:border-box" />
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+      <div class="form-group">
+        <label>Latitude</label>
+        <input type="number" step="any" id="editPlaceLat" style="width:100%;padding:0.625rem 0.875rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:inherit;outline:none;box-sizing:border-box" />
+      </div>
+      <div class="form-group">
+        <label>Longitude</label>
+        <input type="number" step="any" id="editPlaceLng" style="width:100%;padding:0.625rem 0.875rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:inherit;outline:none;box-sizing:border-box" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Image URL</label>
+      <input type="url" id="editPlaceImageUrl" placeholder="https://…" style="width:100%;padding:0.625rem 0.875rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:inherit;outline:none;box-sizing:border-box" />
+    </div>
+    <div id="editPlacePreviewWrap" style="margin:0.5rem 0 1rem;display:none">
+      <img id="editPlacePreview" src="" alt="Preview" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid var(--border)" />
+    </div>
+    <div style="display:flex;gap:0.75rem;margin-top:1.25rem;flex-wrap:wrap">
+      <button class="btn btn-primary" id="savePlaceEditBtn" onclick="savePlaceEdit()">Save Changes</button>
+      <button class="btn btn-outline" onclick="closePlaceEditModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast container -->
 <div id="toastContainer"></div>
 
@@ -458,7 +501,7 @@ let adminToken = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
 const state = {
   users: { page: 1, total: 0, q: '' },
   reviews: { page: 1, total: 0, q: '', status: '' },
-  places: { page: 1, total: 0, q: '' },
+  places: { page: 1, total: 0, q: '', status: '' },
 };
 
 // =============================================
@@ -809,11 +852,12 @@ document.getElementById('reviewsNextPage').addEventListener('click', () => {
 // =============================================
 async function loadPlaces() {
   const tbody = document.getElementById('placesTableBody');
-  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-light)">Loading…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-light)">Loading…</td></tr>';
 
   try {
     const params = new URLSearchParams({ page: state.places.page, pageSize: 20 });
     if (state.places.q) params.append('q', state.places.q);
+    if (state.places.status) params.append('status', state.places.status);
     const data = await apiGet(`/admin/places?${params}`);
     state.places.total = data.total;
 
@@ -823,14 +867,14 @@ async function loadPlaces() {
     document.getElementById('placesNextPage').disabled = state.places.page >= Math.ceil(data.total / 20);
 
     if (!data.items || data.items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-light)">No places found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-light)">No places found</td></tr>';
       return;
     }
 
     tbody.innerHTML = data.items.map(p => `
       <tr id="place-row-${p.id}">
         <td><strong>${escHtml(p.name)}</strong></td>
-        <td class="text-secondary">${escHtml(p.address)}</td>
+        <td class="text-secondary" style="max-width:180px"><span class="truncate">${escHtml(p.address)}</span></td>
         <td>
           ${p.imageUrl
             ? `<img src="${escHtml(p.imageUrl)}" alt="" style="width:48px;height:36px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" />`
@@ -838,10 +882,15 @@ async function loadPlaces() {
         </td>
         <td>${p.averageRating ? `${renderStars(p.averageRating)} <span style="font-size:0.8rem">${p.averageRating}</span>` : '<span style="color:var(--text-light)">No ratings</span>'}</td>
         <td>${p.reviewCount}</td>
-        <td class="text-muted">${fmtDate(p.cachedAt)}</td>
-        <td>
-          <button class="btn btn-outline btn-sm" onclick="openImageModal('${p.id}', '${escHtml(p.name)}', '${escHtml(p.imageUrl || '')}')">
-            ${p.imageUrl ? '✏️ Edit' : '+ Image'}
+        <td id="place-status-${p.id}">${p.status === 'active'
+          ? '<span class="badge badge-green">Active</span>'
+          : '<span class="badge badge-red">Hidden</span>'}</td>
+        <td style="white-space:nowrap;display:flex;gap:0.4rem;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="openPlaceEditModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">✏️ Edit</button>
+          <button class="btn btn-sm ${p.status === 'active' ? 'btn-outline' : 'btn-primary'}"
+            id="place-toggle-${p.id}"
+            onclick="togglePlaceStatus('${p.id}', '${p.status}')">
+            ${p.status === 'active' ? 'Hide' : 'Activate'}
           </button>
         </td>
       </tr>
@@ -853,12 +902,17 @@ async function loadPlaces() {
 
 document.getElementById('placeSearchBtn').addEventListener('click', () => {
   state.places.q = document.getElementById('placeSearch').value.trim();
+  state.places.status = document.getElementById('placeStatusFilter').value;
   state.places.page = 1;
   loadPlaces();
 });
 
 document.getElementById('placeSearch').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('placeSearchBtn').click();
+});
+
+document.getElementById('placeStatusFilter').addEventListener('change', () => {
+  document.getElementById('placeSearchBtn').click();
 });
 
 document.getElementById('placesPrevPage').addEventListener('click', () => {
@@ -868,6 +922,97 @@ document.getElementById('placesPrevPage').addEventListener('click', () => {
 document.getElementById('placesNextPage').addEventListener('click', () => {
   if (state.places.page < Math.ceil(state.places.total / 20)) { state.places.page++; loadPlaces(); }
 });
+
+// =============================================
+// Place Edit Modal
+// =============================================
+function openPlaceEditModal(p) {
+  document.getElementById('editPlaceId').value = p.id;
+  document.getElementById('editPlaceName').value = p.name || '';
+  document.getElementById('editPlaceAddress').value = p.address || '';
+  document.getElementById('editPlaceLat').value = p.lat || '';
+  document.getElementById('editPlaceLng').value = p.lng || '';
+  document.getElementById('editPlaceImageUrl').value = p.imageUrl || '';
+  updateEditPlacePreview(p.imageUrl || '');
+  document.getElementById('placeEditModal').style.display = 'flex';
+  document.getElementById('editPlaceName').focus();
+}
+
+function closePlaceEditModal() {
+  document.getElementById('placeEditModal').style.display = 'none';
+}
+
+function updateEditPlacePreview(url) {
+  const wrap = document.getElementById('editPlacePreviewWrap');
+  const img = document.getElementById('editPlacePreview');
+  if (url) { img.src = url; wrap.style.display = 'block'; }
+  else { wrap.style.display = 'none'; }
+}
+
+document.getElementById('editPlaceImageUrl').addEventListener('input', (e) => {
+  updateEditPlacePreview(e.target.value.trim());
+});
+
+document.getElementById('placeEditModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('placeEditModal')) closePlaceEditModal();
+});
+
+async function savePlaceEdit() {
+  const id = document.getElementById('editPlaceId').value;
+  const name = document.getElementById('editPlaceName').value.trim();
+  if (!name) { showToast('Name is required', 'error'); return; }
+
+  const btn = document.getElementById('savePlaceEditBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await fetch(`${BASE}/admin/places/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({
+        name,
+        address: document.getElementById('editPlaceAddress').value.trim() || null,
+        lat: parseFloat(document.getElementById('editPlaceLat').value) || null,
+        lng: parseFloat(document.getElementById('editPlaceLng').value) || null,
+        imageUrl: document.getElementById('editPlaceImageUrl').value.trim() || null,
+      })
+    });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+    showToast('Place updated', 'success');
+    closePlaceEditModal();
+    loadPlaces();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Changes';
+  }
+}
+
+async function togglePlaceStatus(id, currentStatus) {
+  const newStatus = currentStatus === 'active' ? 'hidden' : 'active';
+  try {
+    const res = await fetch(`${BASE}/admin/places/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ status: newStatus })
+    });
+    const data = await res.json();
+    if (data.status) {
+      document.getElementById(`place-status-${id}`).innerHTML = data.status === 'active'
+        ? '<span class="badge badge-green">Active</span>'
+        : '<span class="badge badge-red">Hidden</span>';
+      const btn = document.getElementById(`place-toggle-${id}`);
+      if (btn) {
+        btn.className = `btn btn-sm ${data.status === 'active' ? 'btn-outline' : 'btn-primary'}`;
+        btn.textContent = data.status === 'active' ? 'Hide' : 'Activate';
+        btn.setAttribute('onclick', `togglePlaceStatus('${id}', '${data.status}')`);
+      }
+      showToast(`Place ${newStatus}`, 'success');
+      loadStats();
+    }
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
 
 // =============================================
 // Image Modal

@@ -111,11 +111,13 @@ public class AdminController : ControllerBase
 
     [Authorize(Roles = "admin")]
     [HttpGet("places")]
-    public async Task<IActionResult> GetPlaces([FromQuery] string? q, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<IActionResult> GetPlaces([FromQuery] string? q, [FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         var query = _db.Places.AsQueryable();
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(p => p.Name.ToLower().Contains(q.ToLower()));
+        if (!string.IsNullOrWhiteSpace(status))
+            query = query.Where(p => p.Status == status);
 
         var total = await query.CountAsync();
         var places = await query.OrderBy(p => p.Name).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
@@ -130,7 +132,7 @@ public class AdminController : ControllerBase
         var dtos = places.Select(p =>
         {
             var (avg, count) = ratingMap.TryGetValue(p.Id, out var r) ? r : (0, 0);
-            return new AdminPlaceDto(p.Id, p.Name, p.Address, count > 0 ? Math.Round(avg, 1) : null, count, p.CachedAt, p.ImageUrl);
+            return new AdminPlaceDto(p.Id, p.Name, p.Address, p.Lat, p.Lng, count > 0 ? Math.Round(avg, 1) : null, count, p.Status, p.CachedAt, p.ImageUrl);
         }).ToList();
         return Ok(new { total, page, pageSize, items = dtos });
     }
@@ -144,5 +146,38 @@ public class AdminController : ControllerBase
         place.ImageUrl = req.ImageUrl;
         await _db.SaveChangesAsync();
         return Ok(new { id, imageUrl = place.ImageUrl });
+    }
+
+    [Authorize(Roles = "admin")]
+    [HttpPatch("places/{id:guid}")]
+    public async Task<IActionResult> UpdatePlace(Guid id, [FromBody] UpdatePlaceRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.Name))
+            return BadRequest(new { error = "Name is required." });
+
+        var place = await _db.Places.FindAsync(id);
+        if (place == null) return NotFound();
+
+        place.Name = req.Name.Trim();
+        place.Address = req.Address?.Trim();
+        place.Lat = req.Lat;
+        place.Lng = req.Lng;
+        if (req.ImageUrl != null) place.ImageUrl = req.ImageUrl;
+        await _db.SaveChangesAsync();
+        return Ok(new { id, place.Name, place.Address, place.Lat, place.Lng, place.ImageUrl });
+    }
+
+    [Authorize(Roles = "admin")]
+    [HttpPatch("places/{id:guid}/status")]
+    public async Task<IActionResult> UpdatePlaceStatus(Guid id, [FromBody] UpdatePlaceStatusRequest req)
+    {
+        if (req.Status != "active" && req.Status != "hidden")
+            return BadRequest(new { error = "Status must be 'active' or 'hidden'." });
+
+        var place = await _db.Places.FindAsync(id);
+        if (place == null) return NotFound();
+        place.Status = req.Status;
+        await _db.SaveChangesAsync();
+        return Ok(new { id, status = place.Status });
     }
 }
