@@ -219,7 +219,11 @@ const App = (() => {
         const card = document.createElement('div');
         card.className = 'place-card';
         card.innerHTML = `
-            <div class="place-card-image">🍵</div>
+            <div class="place-card-image">
+                ${place.imageUrl
+                    ? `<img src="${place.imageUrl}" alt="${escapeHtml(place.name)}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='🍵'" />`
+                    : '🍵'}
+            </div>
             <div class="place-card-body">
                 <div class="place-card-header">
                     <div class="place-card-name">${escapeHtml(place.name)}</div>
@@ -374,7 +378,11 @@ const App = (() => {
 
             content.innerHTML = `
                 <div class="place-detail-header">
-                    <div class="place-detail-icon">🍵</div>
+                    <div class="place-detail-icon">
+                        ${place.imageUrl
+                            ? `<img src="${place.imageUrl}" alt="${escapeHtml(place.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.parentElement.innerHTML='🍵'" />`
+                            : '🍵'}
+                    </div>
                     <div class="place-detail-info">
                         <div class="place-detail-name">${escapeHtml(place.name)}</div>
                         <div class="place-detail-address">📍 ${escapeHtml(place.address || 'Toronto, ON')}</div>
