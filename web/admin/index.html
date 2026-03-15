@@ -395,13 +395,15 @@
               <tr>
                 <th>Name</th>
                 <th>Address</th>
+                <th>Image</th>
                 <th>Avg Rating</th>
                 <th>Reviews</th>
                 <th>Cached At</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody id="placesTableBody">
-              <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-light)">Loading…</td></tr>
+              <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-light)">Loading…</td></tr>
             </tbody>
           </table>
         </div>
@@ -415,6 +417,27 @@
         </div>
       </div>
     </main>
+  </div>
+</div>
+
+<!-- Image Edit Modal -->
+<div id="imageModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:none;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:2rem;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative">
+    <button onclick="closeImageModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.25rem;cursor:pointer;color:#6b7280">✕</button>
+    <h3 style="margin-bottom:0.25rem;font-size:1.1rem">Edit Place Image</h3>
+    <p id="imageModalPlaceName" style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:1.25rem"></p>
+    <div class="form-group">
+      <label>Image URL</label>
+      <input type="url" id="imageUrlInput" placeholder="https://example.com/photo.jpg" style="width:100%;padding:0.625rem 0.875rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:inherit;outline:none;box-sizing:border-box" />
+    </div>
+    <div id="imagePreviewWrap" style="margin:0.75rem 0;display:none">
+      <img id="imagePreview" src="" alt="Preview" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;border:1px solid var(--border)" />
+    </div>
+    <div style="display:flex;gap:0.75rem;margin-top:1.25rem">
+      <button class="btn btn-primary" id="saveImageBtn" onclick="saveImage()">Save Image</button>
+      <button class="btn btn-outline" onclick="clearImage()">Clear Image</button>
+      <button class="btn btn-outline" onclick="closeImageModal()" style="margin-left:auto">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -805,12 +828,22 @@ async function loadPlaces() {
     }
 
     tbody.innerHTML = data.items.map(p => `
-      <tr>
+      <tr id="place-row-${p.id}">
         <td><strong>${escHtml(p.name)}</strong></td>
         <td class="text-secondary">${escHtml(p.address)}</td>
+        <td>
+          ${p.imageUrl
+            ? `<img src="${escHtml(p.imageUrl)}" alt="" style="width:48px;height:36px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" />`
+            : '<span style="color:var(--text-light);font-size:0.8rem">None</span>'}
+        </td>
         <td>${p.averageRating ? `${renderStars(p.averageRating)} <span style="font-size:0.8rem">${p.averageRating}</span>` : '<span style="color:var(--text-light)">No ratings</span>'}</td>
         <td>${p.reviewCount}</td>
         <td class="text-muted">${fmtDate(p.cachedAt)}</td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="openImageModal('${p.id}', '${escHtml(p.name)}', '${escHtml(p.imageUrl || '')}')">
+            ${p.imageUrl ? '✏️ Edit' : '+ Image'}
+          </button>
+        </td>
       </tr>
     `).join('');
   } catch (err) {
@@ -835,6 +868,76 @@ document.getElementById('placesPrevPage').addEventListener('click', () => {
 document.getElementById('placesNextPage').addEventListener('click', () => {
   if (state.places.page < Math.ceil(state.places.total / 20)) { state.places.page++; loadPlaces(); }
 });
+
+// =============================================
+// Image Modal
+// =============================================
+let imageModalPlaceId = null;
+
+function openImageModal(id, name, currentUrl) {
+  imageModalPlaceId = id;
+  document.getElementById('imageModalPlaceName').textContent = name;
+  const input = document.getElementById('imageUrlInput');
+  input.value = currentUrl || '';
+  updateImagePreview(currentUrl);
+  const modal = document.getElementById('imageModal');
+  modal.style.display = 'flex';
+  input.focus();
+}
+
+function closeImageModal() {
+  document.getElementById('imageModal').style.display = 'none';
+  imageModalPlaceId = null;
+}
+
+function updateImagePreview(url) {
+  const wrap = document.getElementById('imagePreviewWrap');
+  const img = document.getElementById('imagePreview');
+  if (url) {
+    img.src = url;
+    wrap.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+document.getElementById('imageUrlInput').addEventListener('input', (e) => {
+  updateImagePreview(e.target.value.trim());
+});
+
+document.getElementById('imageModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('imageModal')) closeImageModal();
+});
+
+async function saveImage() {
+  if (!imageModalPlaceId) return;
+  const url = document.getElementById('imageUrlInput').value.trim() || null;
+  const btn = document.getElementById('saveImageBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    const res = await fetch(`${BASE}/admin/places/${imageModalPlaceId}/image`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ imageUrl: url })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to save');
+    showToast('Image updated', 'success');
+    closeImageModal();
+    loadPlaces();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Image';
+  }
+}
+
+async function clearImage() {
+  document.getElementById('imageUrlInput').value = '';
+  updateImagePreview('');
+}
 
 // =============================================
 // Init
