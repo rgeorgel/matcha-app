@@ -53,9 +53,10 @@ public class PlacesController : ControllerBase
 
         var reviews = await _db.Reviews.Where(r => r.PlaceId == id && r.Status == "published").ToListAsync();
         var avg = reviews.Count > 0 ? Math.Round(reviews.Average(r => (double)r.Rating), 1) : (double?)null;
-        var mapsUrl = place.Lat.HasValue && place.Lng.HasValue
-            ? $"https://www.google.com/maps/search/?api=1&query={place.Lat},{place.Lng}"
-            : null;
+        var mapsQuery = !string.IsNullOrWhiteSpace(place.Address)
+            ? Uri.EscapeDataString($"{place.Name}, {place.Address}")
+            : Uri.EscapeDataString(place.Name);
+        var mapsUrl = $"https://www.google.com/maps/search/?api=1&query={mapsQuery}";
 
         return Ok(new PlaceDetailDto(place.Id, place.Name, place.Address, place.Lat, place.Lng, place.ImageUrl, avg, reviews.Count, mapsUrl));
     }
