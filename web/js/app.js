@@ -282,7 +282,7 @@ const App = (() => {
         const countEl = document.getElementById('placesCount');
         const title = document.getElementById('placesTitle');
         grid.innerHTML = '<div class="loading-spinner"></div>';
-        title.textContent = query === 'matcha' ? 'Matcha Spots in Toronto' : `Results for "${query}"`;
+        title.textContent = !query ? 'All Matcha Spots' : `Results for "${query}"`;
 
         try {
             const places = await API.searchPlaces(query, lat, lng);
@@ -703,8 +703,8 @@ const App = (() => {
             await loadFavouriteIds();
         }
 
-        // Initial search
-        await searchPlaces('matcha', userLocation?.lat, userLocation?.lng);
+        // Initial load — all places ordered by rating
+        await searchPlaces('', userLocation?.lat, userLocation?.lng);
     }
 
     document.addEventListener('DOMContentLoaded', init);

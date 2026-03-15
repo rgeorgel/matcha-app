@@ -22,8 +22,36 @@ public class PlacesController : ControllerBase
     [HttpGet("search")]
     public async Task<IActionResult> Search([FromQuery] string? q, [FromQuery] double? lat, [FromQuery] double? lng)
     {
-        var query = string.IsNullOrWhiteSpace(q) ? "matcha" : q;
-        var places = await _osm.SearchPlacesAsync(query, lat, lng);
+        // No query — return all active places from DB ordered by average rating
+        if (string.IsNullOrWhiteSpace(q))
+        {
+            var allPlaces = await _db.Places
+                .Where(p => p.Status == "active")
+                .ToListAsync();
+
+            var allIds = allPlaces.Select(p => p.Id).ToList();
+            var allRatings = await _db.Reviews
+                .Where(r => allIds.Contains(r.PlaceId) && r.Status == "published")
+                .GroupBy(r => r.PlaceId)
+                .Select(g => new { PlaceId = g.Key, Avg = g.Average(r => (double)r.Rating), Count = g.Count() })
+                .ToListAsync();
+            var allRatingMap = allRatings.ToDictionary(r => r.PlaceId, r => (r.Avg, r.Count));
+
+            var allResult = allPlaces
+                .Select(p =>
+                {
+                    var (avg, count) = allRatingMap.TryGetValue(p.Id, out var r) ? r : (0, 0);
+                    return new PlaceDto(p.Id, p.Name, p.Address, p.Lat, p.Lng, p.ImageUrl, count > 0 ? Math.Round(avg, 1) : null, count);
+                })
+                .OrderByDescending(p => p.AverageRating ?? 0)
+                .ThenBy(p => p.Name)
+                .ToList();
+
+            return Ok(allResult);
+        }
+
+        // With query — search via OSM/cache, sort by distance if coords provided
+        var places = await _osm.SearchPlacesAsync(q, lat, lng);
 
         var ids = places.Select(p => p.Id).ToList();
         var ratings = await _db.Reviews
@@ -31,7 +59,6 @@ public class PlacesController : ControllerBase
             .GroupBy(r => r.PlaceId)
             .Select(g => new { PlaceId = g.Key, Avg = g.Average(r => (double)r.Rating), Count = g.Count() })
             .ToListAsync();
-
         var ratingMap = ratings.ToDictionary(r => r.PlaceId, r => (r.Avg, r.Count));
 
         var result = places
