@@ -12,6 +12,9 @@ const App = (() => {
     let reviewTotal = 0;
     let selectedRating = 0;
     let userReviewedPlaces = new Set();
+    let allFetchedPlaces = [];   // full result set — sort/filter applied client-side
+    let activeSort = 'rating';
+    let activeFilters = new Set();
 
     // =========================================
     // Toast Notifications
@@ -283,28 +286,15 @@ const App = (() => {
     // =========================================
     async function searchPlaces(query, lat, lng) {
         const grid = document.getElementById('placesGrid');
-        const countEl = document.getElementById('placesCount');
         const title = document.getElementById('placesTitle');
         grid.innerHTML = '<div class="loading-spinner"></div>';
         title.textContent = !query ? 'All Matcha Spots' : `Results for "${query}"`;
 
         try {
             const places = await API.searchPlaces(query, lat, lng);
-            grid.innerHTML = '';
-            countEl.textContent = `${places.length} spot${places.length !== 1 ? 's' : ''}`;
             if (query) gtag('event', 'search', { search_term: query, results_count: places.length });
-
-            if (places.length === 0) {
-                grid.innerHTML = `
-                    <div class="empty-state">
-                        <span class="empty-state-icon">🍵</span>
-                        <h3>No spots found</h3>
-                        <p>Try a different search term or browse all Toronto matcha cafes.</p>
-                    </div>`;
-                return;
-            }
-
-            places.forEach(place => grid.appendChild(createPlaceCard(place)));
+            allFetchedPlaces = places;
+            applyAndRender();
         } catch (err) {
             grid.innerHTML = `
                 <div class="empty-state">
@@ -315,6 +305,89 @@ const App = (() => {
         }
     }
 
+    function applyAndRender() {
+        const grid = document.getElementById('placesGrid');
+        const countEl = document.getElementById('placesCount');
+
+        // --- Filter ---
+        let places = allFetchedPlaces.filter(p => {
+            if (activeFilters.has('images') && !p.imageUrl) return false;
+            if (activeFilters.has('reviewed') && p.reviewCount === 0) return false;
+            if (activeFilters.has('unreviewed') && p.reviewCount > 0) return false;
+            if (activeFilters.has('top') && (p.averageRating == null || p.averageRating < 4)) return false;
+            return true;
+        });
+
+        // --- Sort ---
+        places = [...places].sort((a, b) => {
+            if (activeSort === 'name') return a.name.localeCompare(b.name);
+            if (activeSort === 'rating') return (b.averageRating ?? 0) - (a.averageRating ?? 0) || a.name.localeCompare(b.name);
+            if (activeSort === 'distance') {
+                if (!userLocation) return 0;
+                const dist = p => {
+                    if (p.lat == null || p.lng == null) return Infinity;
+                    const dlat = p.lat - userLocation.lat;
+                    const dlng = p.lng - userLocation.lng;
+                    return dlat * dlat + dlng * dlng;
+                };
+                return dist(a) - dist(b);
+            }
+            return 0;
+        });
+
+        countEl.textContent = `${places.length} spot${places.length !== 1 ? 's' : ''}`;
+        grid.innerHTML = '';
+
+        if (places.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <span class="empty-state-icon">🍵</span>
+                    <h3>No spots found</h3>
+                    <p>${activeFilters.size > 0 ? 'Try removing some filters.' : 'Try a different search term.'}</p>
+                </div>`;
+            return;
+        }
+
+        places.forEach(place => grid.appendChild(createPlaceCard(place)));
+    }
+
+    function resetSortFilter() {
+        activeSort = 'rating';
+        activeFilters.clear();
+        document.querySelectorAll('#sortPills .pill').forEach(p => p.classList.toggle('active', p.dataset.sort === 'rating'));
+        document.querySelectorAll('#filterPills .pill').forEach(p => p.classList.remove('active'));
+    }
+
+    function setupSortFilter() {
+        document.querySelectorAll('#sortPills .pill').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#sortPills .pill').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                activeSort = btn.dataset.sort;
+                if (activeSort === 'distance' && !userLocation) {
+                    showToast('Enable location first using "📍 Near Me"', 'info');
+                }
+                gtag('event', 'sort_places', { sort_by: activeSort });
+                applyAndRender();
+            });
+        });
+
+        document.querySelectorAll('#filterPills .pill').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const f = btn.dataset.filter;
+                if (activeFilters.has(f)) {
+                    activeFilters.delete(f);
+                    btn.classList.remove('active');
+                } else {
+                    activeFilters.add(f);
+                    btn.classList.add('active');
+                }
+                gtag('event', 'filter_places', { filters: [...activeFilters].join(',') });
+                applyAndRender();
+            });
+        });
+    }
+
     function setupSearch() {
         const input = document.getElementById('searchInput');
         const btn = document.getElementById('btnSearch');
@@ -322,6 +395,7 @@ const App = (() => {
 
         btn.addEventListener('click', () => {
             const q = input.value.trim() || 'matcha';
+            resetSortFilter();
             searchPlaces(q, userLocation?.lat, userLocation?.lng);
         });
 
@@ -691,6 +765,7 @@ const App = (() => {
         updateNavAuth();
         setupAuthModals();
         setupSearch();
+        setupSortFilter();
 
         // Nav tab switching
         document.querySelectorAll('.nav-tab').forEach(tab => {
