@@ -130,8 +130,19 @@ public class AdminController : ControllerBase
         var dtos = places.Select(p =>
         {
             var (avg, count) = ratingMap.TryGetValue(p.Id, out var r) ? r : (0, 0);
-            return new AdminPlaceDto(p.Id, p.Name, p.Address, count > 0 ? Math.Round(avg, 1) : null, count, p.CachedAt);
+            return new AdminPlaceDto(p.Id, p.Name, p.Address, count > 0 ? Math.Round(avg, 1) : null, count, p.CachedAt, p.ImageUrl);
         }).ToList();
         return Ok(new { total, page, pageSize, items = dtos });
+    }
+
+    [Authorize(Roles = "admin")]
+    [HttpPatch("places/{id:guid}/image")]
+    public async Task<IActionResult> UpdatePlaceImage(Guid id, [FromBody] UpdatePlaceImageRequest req)
+    {
+        var place = await _db.Places.FindAsync(id);
+        if (place == null) return NotFound();
+        place.ImageUrl = req.ImageUrl;
+        await _db.SaveChangesAsync();
+        return Ok(new { id, imageUrl = place.ImageUrl });
     }
 }
