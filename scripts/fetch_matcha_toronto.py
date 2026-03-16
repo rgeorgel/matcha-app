@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Fetch Toronto matcha cafes from OpenStreetMap (Overpass API)
+Fetch Toronto coffee/cafe places from OpenStreetMap (Overpass API)
 and export to a CSV ready to import into the `places` table.
+All cafes and tea shops are included so they can be reviewed in the app.
 
 Schema:
   id        uuid  (generated on insert, left blank here)
@@ -30,10 +31,6 @@ OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
 # Toronto bounding box  (south, west, north, east)
 BBOX = (43.5810, -79.6393, 43.8555, -79.1168)
-
-# Keywords that indicate a matcha place.
-# We query OSM for all cafes/tea shops, then filter client-side.
-MATCHA_KEYWORDS = ["matcha", "macha", "ceremonial", "sencha", "hojicha", "japanese tea"]
 
 # Overpass query: nodes + ways tagged as cafe or tea (Toronto bbox)
 OVERPASS_QUERY = """
@@ -86,21 +83,10 @@ def build_address(tags: dict) -> str:
     return ", ".join(parts) if parts else ""
 
 
-def is_matcha_place(tags: dict) -> bool:
-    searchable = " ".join(
-        str(v).lower()
-        for k, v in tags.items()
-        if k in ("name", "alt_name", "description", "cuisine", "menu", "operator", "brand")
-    )
-    return any(kw in searchable for kw in MATCHA_KEYWORDS)
-
-
 def element_to_row(el: dict) -> Optional[dict]:
     tags = el.get("tags", {})
     name = tags.get("name", "").strip()
     if not name:
-        return None
-    if not is_matcha_place(tags):
         return None
 
     # Coordinates — nodes have lat/lon directly; ways expose a "center"
@@ -132,7 +118,7 @@ def element_to_row(el: dict) -> Optional[dict]:
 # ---------------------------------------------------------------------------
 
 def main():
-    print("🍵  Toronto Matcha Places — OSM Fetcher")
+    print("☕  Toronto Coffee/Cafe Places — OSM Fetcher")
     print("=" * 50)
 
     print("\n[1/3] Fetching data from OpenStreetMap Overpass API…")
@@ -140,7 +126,7 @@ def main():
     elements = data.get("elements", [])
     print(f"  ✓ Received {len(elements)} raw elements")
 
-    print("\n[2/3] Filtering for matcha-related places…")
+    print("\n[2/3] Processing all cafe/tea places…")
     rows = []
     seen_osm_ids = set()
     for el in elements:
@@ -149,7 +135,7 @@ def main():
             rows.append(row)
             seen_osm_ids.add(row["osm_id"])
 
-    print(f"  ✓ Found {len(rows)} matcha place(s):")
+    print(f"  ✓ Found {len(rows)} place(s):")
     for r in rows:
         print(f"      • {r['name']}  ({r['lat']:.5f}, {r['lng']:.5f})")
 
