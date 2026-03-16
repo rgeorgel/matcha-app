@@ -111,23 +111,59 @@ public class AdminController : ControllerBase
 
     [Authorize(Roles = "admin")]
     [HttpGet("places")]
-    public async Task<IActionResult> GetPlaces([FromQuery] string? q, [FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<IActionResult> GetPlaces(
+        [FromQuery] string? q,
+        [FromQuery] string? status,
+        [FromQuery] bool? hasImage,
+        [FromQuery] bool? hasReviews,
+        [FromQuery] double? minRating,
+        [FromQuery] string? sort,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
         var query = _db.Places.AsQueryable();
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(p => p.Name.ToLower().Contains(q.ToLower()));
         if (!string.IsNullOrWhiteSpace(status))
             query = query.Where(p => p.Status == status);
+        if (hasImage == true)
+            query = query.Where(p => p.ImageUrl != null && p.ImageUrl != "");
+        if (hasImage == false)
+            query = query.Where(p => p.ImageUrl == null || p.ImageUrl == "");
 
         var total = await query.CountAsync();
-        var places = await query.OrderBy(p => p.Name).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
 
-        var ids = places.Select(p => p.Id).ToList();
-        var ratings = await _db.Reviews.Where(r => ids.Contains(r.PlaceId) && r.Status == "published")
+        // For hasReviews / minRating we join after counting so pagination stays correct
+        var placeIds = await query.Select(p => p.Id).ToListAsync();
+        var allRatings = await _db.Reviews
+            .Where(r => placeIds.Contains(r.PlaceId) && r.Status == "published")
             .GroupBy(r => r.PlaceId)
             .Select(g => new { PlaceId = g.Key, Avg = g.Average(r => (double)r.Rating), Count = g.Count() })
             .ToListAsync();
-        var ratingMap = ratings.ToDictionary(r => r.PlaceId, r => (r.Avg, r.Count));
+        var ratingMap = allRatings.ToDictionary(r => r.PlaceId, r => (r.Avg, r.Count));
+
+        if (hasReviews == true)
+            placeIds = placeIds.Where(id => ratingMap.ContainsKey(id)).ToList();
+        if (hasReviews == false)
+            placeIds = placeIds.Where(id => !ratingMap.ContainsKey(id)).ToList();
+        if (minRating.HasValue)
+            placeIds = placeIds.Where(id => ratingMap.TryGetValue(id, out var r) && r.Avg >= minRating.Value).ToList();
+
+        // Re-count after in-memory filters
+        if (hasReviews.HasValue || minRating.HasValue)
+            total = placeIds.Count;
+
+        query = _db.Places.Where(p => placeIds.Contains(p.Id));
+
+        query = sort switch
+        {
+            "rating_desc" => query.OrderByDescending(p => ratingMap.ContainsKey(p.Id) ? ratingMap[p.Id].Avg : 0),
+            "reviews_desc" => query.OrderByDescending(p => ratingMap.ContainsKey(p.Id) ? ratingMap[p.Id].Count : 0),
+            "newest" => query.OrderByDescending(p => p.CachedAt),
+            _ => query.OrderBy(p => p.Name),
+        };
+
+        var places = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
 
         var dtos = places.Select(p =>
         {

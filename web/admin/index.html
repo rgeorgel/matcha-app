@@ -392,7 +392,30 @@
             <option value="active">Active</option>
             <option value="hidden">Hidden</option>
           </select>
+          <select id="placeImageFilter">
+            <option value="">Any image</option>
+            <option value="true">Has image</option>
+            <option value="false">No image</option>
+          </select>
+          <select id="placeReviewsFilter">
+            <option value="">Any reviews</option>
+            <option value="true">Has reviews</option>
+            <option value="false">No reviews</option>
+          </select>
+          <select id="placeMinRatingFilter">
+            <option value="">Any rating</option>
+            <option value="4">4+ stars</option>
+            <option value="3">3+ stars</option>
+            <option value="2">2+ stars</option>
+          </select>
+          <select id="placeSortFilter">
+            <option value="">Sort: Name</option>
+            <option value="rating_desc">Sort: Top Rated</option>
+            <option value="reviews_desc">Sort: Most Reviewed</option>
+            <option value="newest">Sort: Newest</option>
+          </select>
           <button class="btn btn-primary btn-sm" id="placeSearchBtn">Search</button>
+          <button class="btn btn-outline btn-sm" id="placeClearFiltersBtn">Clear</button>
         </div>
         <div class="admin-table-wrap">
           <table class="admin-table">
@@ -501,7 +524,7 @@ let adminToken = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
 const state = {
   users: { page: 1, total: 0, q: '' },
   reviews: { page: 1, total: 0, q: '', status: '' },
-  places: { page: 1, total: 0, q: '', status: '' },
+  places: { page: 1, total: 0, q: '', status: '', hasImage: '', hasReviews: '', minRating: '', sort: '' },
 };
 
 // =============================================
@@ -858,6 +881,10 @@ async function loadPlaces() {
     const params = new URLSearchParams({ page: state.places.page, pageSize: 20 });
     if (state.places.q) params.append('q', state.places.q);
     if (state.places.status) params.append('status', state.places.status);
+    if (state.places.hasImage !== '') params.append('hasImage', state.places.hasImage);
+    if (state.places.hasReviews !== '') params.append('hasReviews', state.places.hasReviews);
+    if (state.places.minRating) params.append('minRating', state.places.minRating);
+    if (state.places.sort) params.append('sort', state.places.sort);
     const data = await apiGet(`/admin/places?${params}`);
     state.places.total = data.total;
 
@@ -900,19 +927,35 @@ async function loadPlaces() {
   }
 }
 
-document.getElementById('placeSearchBtn').addEventListener('click', () => {
+function applyPlaceFilters() {
   state.places.q = document.getElementById('placeSearch').value.trim();
   state.places.status = document.getElementById('placeStatusFilter').value;
+  state.places.hasImage = document.getElementById('placeImageFilter').value;
+  state.places.hasReviews = document.getElementById('placeReviewsFilter').value;
+  state.places.minRating = document.getElementById('placeMinRatingFilter').value;
+  state.places.sort = document.getElementById('placeSortFilter').value;
   state.places.page = 1;
   loadPlaces();
-});
+}
+
+document.getElementById('placeSearchBtn').addEventListener('click', applyPlaceFilters);
 
 document.getElementById('placeSearch').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') document.getElementById('placeSearchBtn').click();
+  if (e.key === 'Enter') applyPlaceFilters();
 });
 
-document.getElementById('placeStatusFilter').addEventListener('change', () => {
-  document.getElementById('placeSearchBtn').click();
+['placeStatusFilter', 'placeImageFilter', 'placeReviewsFilter', 'placeMinRatingFilter', 'placeSortFilter'].forEach(id => {
+  document.getElementById(id).addEventListener('change', applyPlaceFilters);
+});
+
+document.getElementById('placeClearFiltersBtn').addEventListener('click', () => {
+  document.getElementById('placeSearch').value = '';
+  document.getElementById('placeStatusFilter').value = '';
+  document.getElementById('placeImageFilter').value = '';
+  document.getElementById('placeReviewsFilter').value = '';
+  document.getElementById('placeMinRatingFilter').value = '';
+  document.getElementById('placeSortFilter').value = '';
+  applyPlaceFilters();
 });
 
 document.getElementById('placesPrevPage').addEventListener('click', () => {
