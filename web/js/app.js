@@ -12,9 +12,10 @@ const App = (() => {
     let reviewTotal = 0;
     let selectedRating = 0;
     let userReviewedPlaces = new Set();
-    let allFetchedPlaces = [];   // full result set — sort/filter applied client-side
     let activeSort = 'rating';
     let activeFilters = new Set();
+    let currentQuery = '';
+    let pagination = { page: 1, total: 0, hasMore: false, loading: false };
 
     // =========================================
     // Toast Notifications
@@ -284,19 +285,62 @@ const App = (() => {
     // =========================================
     // Home / Search
     // =========================================
-    async function searchPlaces(query, lat, lng) {
+    function buildSearchParams(page = 1) {
+        const params = { page, pageSize: 20, sort: activeSort };
+        if (currentQuery)                  params.q = currentQuery;
+        if (userLocation)                  { params.lat = userLocation.lat; params.lng = userLocation.lng; }
+        if (activeFilters.has('images'))   params.hasImage = true;
+        if (activeFilters.has('reviewed')) params.hasReviews = true;
+        if (activeFilters.has('unreviewed')) params.noReviews = true;
+        if (activeFilters.has('top'))      params.minRating = 4;
+        return params;
+    }
+
+    async function searchPlaces(query, resetGrid = true) {
+        if (pagination.loading) return;
+        currentQuery = query || '';
+
         const grid = document.getElementById('placesGrid');
         const title = document.getElementById('placesTitle');
-        grid.innerHTML = '<div class="loading-spinner"></div>';
-        title.textContent = !query ? 'All Matcha Spots' : `Results for "${query}"`;
+
+        if (resetGrid) {
+            pagination = { page: 1, total: 0, hasMore: false, loading: true };
+            grid.innerHTML = '<div class="loading-spinner"></div>';
+            title.textContent = !currentQuery ? 'All Matcha Spots' : `Results for "${currentQuery}"`;
+        } else {
+            pagination.loading = true;
+            document.getElementById('loadMoreSpinner').style.display = 'block';
+        }
 
         try {
-            const places = await API.searchPlaces(query, lat, lng);
-            if (query) gtag('event', 'search', { search_term: query, results_count: places.length });
-            allFetchedPlaces = places;
-            applyAndRender();
+            const data = await API.searchPlaces(buildSearchParams(pagination.page));
+            pagination.total = data.total;
+            pagination.hasMore = data.hasMore;
+            pagination.loading = false;
+
+            if (currentQuery && resetGrid) gtag('event', 'search', { search_term: currentQuery, results_count: data.total });
+
+            document.getElementById('placesCount').textContent =
+                `${data.total} spot${data.total !== 1 ? 's' : ''}`;
+
+            if (resetGrid) grid.innerHTML = '';
+            document.getElementById('loadMoreSpinner').style.display = 'none';
+
+            if (data.total === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <span class="empty-state-icon">🍵</span>
+                        <h3>No spots found</h3>
+                        <p>${activeFilters.size > 0 ? 'Try removing some filters.' : 'Try a different search term.'}</p>
+                    </div>`;
+                return;
+            }
+
+            data.items.forEach(place => grid.appendChild(createPlaceCard(place)));
         } catch (err) {
-            grid.innerHTML = `
+            pagination.loading = false;
+            document.getElementById('loadMoreSpinner').style.display = 'none';
+            if (resetGrid) grid.innerHTML = `
                 <div class="empty-state">
                     <span class="empty-state-icon">⚠️</span>
                     <h3>Could not load places</h3>
@@ -305,50 +349,18 @@ const App = (() => {
         }
     }
 
-    function applyAndRender() {
-        const grid = document.getElementById('placesGrid');
-        const countEl = document.getElementById('placesCount');
+    function loadNextPage() {
+        if (pagination.loading || !pagination.hasMore) return;
+        pagination.page++;
+        searchPlaces(currentQuery, false);
+    }
 
-        // --- Filter ---
-        let places = allFetchedPlaces.filter(p => {
-            if (activeFilters.has('images') && !p.imageUrl) return false;
-            if (activeFilters.has('reviewed') && p.reviewCount === 0) return false;
-            if (activeFilters.has('unreviewed') && p.reviewCount > 0) return false;
-            if (activeFilters.has('top') && (p.averageRating == null || p.averageRating < 4)) return false;
-            return true;
-        });
-
-        // --- Sort ---
-        places = [...places].sort((a, b) => {
-            if (activeSort === 'name') return a.name.localeCompare(b.name);
-            if (activeSort === 'rating') return (b.averageRating ?? 0) - (a.averageRating ?? 0) || a.name.localeCompare(b.name);
-            if (activeSort === 'distance') {
-                if (!userLocation) return 0;
-                const dist = p => {
-                    if (p.lat == null || p.lng == null) return Infinity;
-                    const dlat = p.lat - userLocation.lat;
-                    const dlng = p.lng - userLocation.lng;
-                    return dlat * dlat + dlng * dlng;
-                };
-                return dist(a) - dist(b);
-            }
-            return 0;
-        });
-
-        countEl.textContent = `${places.length} spot${places.length !== 1 ? 's' : ''}`;
-        grid.innerHTML = '';
-
-        if (places.length === 0) {
-            grid.innerHTML = `
-                <div class="empty-state">
-                    <span class="empty-state-icon">🍵</span>
-                    <h3>No spots found</h3>
-                    <p>${activeFilters.size > 0 ? 'Try removing some filters.' : 'Try a different search term.'}</p>
-                </div>`;
-            return;
-        }
-
-        places.forEach(place => grid.appendChild(createPlaceCard(place)));
+    function setupInfiniteScroll() {
+        const sentinel = document.getElementById('scrollSentinel');
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) loadNextPage();
+        }, { rootMargin: '200px' });
+        observer.observe(sentinel);
     }
 
     function resetSortFilter() {
@@ -368,7 +380,8 @@ const App = (() => {
                     showToast('Enable location first using "📍 Near Me"', 'info');
                 }
                 gtag('event', 'sort_places', { sort_by: activeSort });
-                applyAndRender();
+                pagination.page = 1;
+                searchPlaces(currentQuery, true);
             });
         });
 
@@ -383,7 +396,8 @@ const App = (() => {
                     btn.classList.add('active');
                 }
                 gtag('event', 'filter_places', { filters: [...activeFilters].join(',') });
-                applyAndRender();
+                pagination.page = 1;
+                searchPlaces(currentQuery, true);
             });
         });
     }
@@ -394,9 +408,9 @@ const App = (() => {
         const locBtn = document.getElementById('btnLocation');
 
         btn.addEventListener('click', () => {
-            const q = input.value.trim() || 'matcha';
             resetSortFilter();
-            searchPlaces(q, userLocation?.lat, userLocation?.lng);
+            pagination.page = 1;
+            searchPlaces(input.value.trim(), true);
         });
 
         input.addEventListener('keydown', (e) => {
@@ -417,7 +431,12 @@ const App = (() => {
                     locBtn.textContent = '📍 Near Me';
                     showToast('Location found! Showing nearby spots.', 'success');
                     gtag('event', 'use_location_search');
-                    searchPlaces(input.value.trim() || 'matcha', userLocation.lat, userLocation.lng);
+                    if (activeSort !== 'distance') {
+                        document.querySelectorAll('#sortPills .pill').forEach(p => p.classList.toggle('active', p.dataset.sort === 'distance'));
+                        activeSort = 'distance';
+                    }
+                    pagination.page = 1;
+                    searchPlaces(input.value.trim(), true);
                 },
                 () => {
                     locBtn.disabled = false;
@@ -766,6 +785,7 @@ const App = (() => {
         setupAuthModals();
         setupSearch();
         setupSortFilter();
+        setupInfiniteScroll();
 
         // Nav tab switching
         document.querySelectorAll('.nav-tab').forEach(tab => {
@@ -789,7 +809,7 @@ const App = (() => {
         }
 
         // Initial load — all places ordered by rating
-        await searchPlaces('', userLocation?.lat, userLocation?.lng);
+        await searchPlaces('', true);
     }
 
     document.addEventListener('DOMContentLoaded', init);

@@ -30,11 +30,16 @@ const API = (() => {
         login: (email, password) => request('POST', '/auth/login', { email, password }),
 
         // Places
-        searchPlaces: (q, lat, lng) => {
-            const params = new URLSearchParams();
-            if (q) params.append('q', q);
-            if (lat) params.append('lat', lat);
-            if (lng) params.append('lng', lng);
+        searchPlaces: ({ q, lat, lng, sort, hasImage, hasReviews, noReviews, minRating, page = 1, pageSize = 20 } = {}) => {
+            const params = new URLSearchParams({ page, pageSize });
+            if (q)          params.append('q', q);
+            if (lat)        params.append('lat', lat);
+            if (lng)        params.append('lng', lng);
+            if (sort)       params.append('sort', sort);
+            if (hasImage)   params.append('hasImage', 'true');
+            if (hasReviews) params.append('hasReviews', 'true');
+            if (noReviews)  params.append('noReviews', 'true');
+            if (minRating)  params.append('minRating', minRating);
             return request('GET', `/places/search?${params}`);
         },
         getPlace: (id) => request('GET', `/places/${id}`),

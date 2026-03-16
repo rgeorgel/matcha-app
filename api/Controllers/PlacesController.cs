@@ -20,40 +20,37 @@ public class PlacesController : ControllerBase
     }
 
     [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] string? q, [FromQuery] double? lat, [FromQuery] double? lng)
+    public async Task<IActionResult> Search(
+        [FromQuery] string? q,
+        [FromQuery] double? lat,
+        [FromQuery] double? lng,
+        [FromQuery] string sort = "rating",
+        [FromQuery] bool hasImage = false,
+        [FromQuery] bool hasReviews = false,
+        [FromQuery] bool noReviews = false,
+        [FromQuery] double? minRating = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
-        // No query — return all active places from DB ordered by average rating
+        if (pageSize > 50) pageSize = 50;
+
+        // 1. Get candidate places
+        List<Models.Place> candidates;
         if (string.IsNullOrWhiteSpace(q))
         {
-            var allPlaces = await _db.Places
+            candidates = await _db.Places
                 .Where(p => p.Status == "active")
                 .ToListAsync();
-
-            var allIds = allPlaces.Select(p => p.Id).ToList();
-            var allRatings = await _db.Reviews
-                .Where(r => allIds.Contains(r.PlaceId) && r.Status == "published")
-                .GroupBy(r => r.PlaceId)
-                .Select(g => new { PlaceId = g.Key, Avg = g.Average(r => (double)r.Rating), Count = g.Count() })
-                .ToListAsync();
-            var allRatingMap = allRatings.ToDictionary(r => r.PlaceId, r => (r.Avg, r.Count));
-
-            var allResult = allPlaces
-                .Select(p =>
-                {
-                    var (avg, count) = allRatingMap.TryGetValue(p.Id, out var r) ? r : (0, 0);
-                    return new PlaceDto(p.Id, p.Name, p.Address, p.Lat, p.Lng, p.ImageUrl, count > 0 ? Math.Round(avg, 1) : null, count);
-                })
-                .OrderByDescending(p => p.AverageRating ?? 0)
-                .ThenBy(p => p.Name)
+        }
+        else
+        {
+            candidates = (await _osm.SearchPlacesAsync(q, lat, lng))
+                .Where(p => p.Status == "active")
                 .ToList();
-
-            return Ok(allResult);
         }
 
-        // With query — search via OSM/cache, sort by distance if coords provided
-        var places = await _osm.SearchPlacesAsync(q, lat, lng);
-
-        var ids = places.Select(p => p.Id).ToList();
+        // 2. Fetch ratings for all candidates
+        var ids = candidates.Select(p => p.Id).ToList();
         var ratings = await _db.Reviews
             .Where(r => ids.Contains(r.PlaceId) && r.Status == "published")
             .GroupBy(r => r.PlaceId)
@@ -61,15 +58,37 @@ public class PlacesController : ControllerBase
             .ToListAsync();
         var ratingMap = ratings.ToDictionary(r => r.PlaceId, r => (r.Avg, r.Count));
 
-        var result = places
-            .Where(p => p.Status == "active")
-            .Select(p =>
-            {
-                var (avg, count) = ratingMap.TryGetValue(p.Id, out var r) ? r : (0, 0);
-                return new PlaceDto(p.Id, p.Name, p.Address, p.Lat, p.Lng, p.ImageUrl, count > 0 ? Math.Round(avg, 1) : null, count);
-            }).ToList();
+        // 3. Build DTOs
+        var dtos = candidates.Select(p =>
+        {
+            var (avg, count) = ratingMap.TryGetValue(p.Id, out var r) ? r : (0, 0);
+            return new PlaceDto(p.Id, p.Name, p.Address, p.Lat, p.Lng, p.ImageUrl,
+                count > 0 ? Math.Round(avg, 1) : null, count);
+        }).ToList();
 
-        return Ok(result);
+        // 4. Apply filters
+        if (hasImage)    dtos = dtos.Where(p => !string.IsNullOrEmpty(p.ImageUrl)).ToList();
+        if (hasReviews)  dtos = dtos.Where(p => p.ReviewCount > 0).ToList();
+        if (noReviews)   dtos = dtos.Where(p => p.ReviewCount == 0).ToList();
+        if (minRating.HasValue) dtos = dtos.Where(p => p.AverageRating >= minRating).ToList();
+
+        // 5. Sort
+        dtos = sort switch
+        {
+            "name" => dtos.OrderBy(p => p.Name).ToList(),
+            "distance" when lat.HasValue && lng.HasValue => dtos
+                .OrderBy(p => p.Lat.HasValue && p.Lng.HasValue
+                    ? Math.Pow(p.Lat.Value - lat.Value, 2) + Math.Pow(p.Lng.Value - lng.Value, 2)
+                    : double.MaxValue)
+                .ToList(),
+            _ => dtos.OrderByDescending(p => p.AverageRating ?? 0).ThenBy(p => p.Name).ToList()
+        };
+
+        // 6. Paginate
+        var total = dtos.Count;
+        var items = dtos.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+        return Ok(new { items, total, page, pageSize, hasMore = page * pageSize < total });
     }
 
     [HttpGet("{id:guid}")]
