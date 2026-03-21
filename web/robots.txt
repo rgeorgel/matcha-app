@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+
+# Allow all major AI search bots
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: GoogleOther
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+Sitemap: https://matcha.carolchang.com/sitemap.xml
