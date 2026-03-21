@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rate Matcha 🍵 — Toronto's Matcha Community</title>
+  <title>Rate Matcha — Toronto's Matcha Community</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
   <!-- Microsoft Clarity -->
   <script type="text/javascript">
@@ -27,7 +30,7 @@
   <!-- Navigation -->
   <nav class="navbar">
     <div class="container nav-inner">
-      <a href="/" class="nav-brand">🍵 Rate Matcha</a>
+      <a href="/" class="nav-brand">Rate Matcha</a>
       <div class="nav-tabs" id="navTabs">
         <button class="nav-tab active" data-view="home">Discover</button>
         <button class="nav-tab" data-view="favourites" id="tabFavourites" style="display:none">Favourites</button>
@@ -50,12 +53,13 @@
     <div id="viewHome">
       <section class="hero">
         <div class="container">
-          <h1>Find Your Perfect Matcha</h1>
-          <p>Toronto's community guide to the best matcha spots — rated by matcha lovers, for matcha lovers.</p>
+          <p class="hero-eyebrow">Toronto · Matcha Community</p>
+          <h1>Find Your Perfect <em>Matcha</em></h1>
+          <p>Discover Toronto's finest matcha cafés, rated by the people who drink it every day.</p>
           <div class="search-bar">
             <input type="text" id="searchInput" placeholder="Search matcha spots in Toronto…" />
             <button class="btn btn-primary" id="btnSearch">Search</button>
-            <button class="btn btn-outline" id="btnLocation" title="Use my location">📍 Near Me</button>
+            <button class="btn btn-outline" id="btnLocation" title="Use my location">Near Me</button>
           </div>
         </div>
       </section>
@@ -71,18 +75,18 @@
             <div class="sort-filter-group">
               <label class="sort-filter-label">Sort by</label>
               <div class="sort-filter-pills" id="sortPills">
-                <button class="pill active" data-sort="rating">⭐ Best Rating</button>
-                <button class="pill" data-sort="name">🔤 Name A–Z</button>
-                <button class="pill" data-sort="distance">📍 Closest</button>
+                <button class="pill active" data-sort="rating">Best Rating</button>
+                <button class="pill" data-sort="name">Name A–Z</button>
+                <button class="pill" data-sort="distance">Closest</button>
               </div>
             </div>
             <div class="sort-filter-group">
               <label class="sort-filter-label">Filter</label>
               <div class="sort-filter-pills" id="filterPills">
-                <button class="pill" data-filter="images">📷 Has Photo</button>
-                <button class="pill" data-filter="reviewed">✅ Has Reviews</button>
-                <button class="pill" data-filter="unreviewed">🆕 Not Yet Reviewed</button>
-                <button class="pill" data-filter="top">🏆 Top Rated (4+)</button>
+                <button class="pill" data-filter="images">Has Photo</button>
+                <button class="pill" data-filter="reviewed">Has Reviews</button>
+                <button class="pill" data-filter="unreviewed">Not Yet Reviewed</button>
+                <button class="pill" data-filter="top">Top Rated 4+</button>
               </div>
             </div>
           </div>
