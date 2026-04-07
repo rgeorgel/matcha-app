@@ -18,9 +18,13 @@ const API = (() => {
         const opts = { method, headers: getHeaders(auth) };
         if (body) opts.body = JSON.stringify(body);
         const res = await fetch(BASE + path, opts);
-        if (res.status === 204) return null;
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || `Request failed: ${res.status}`);
+        
+        if (res.status === 204 || res.status === 201 && method !== 'POST') return null;
+        
+        const text = await res.text();
+        const data = text ? JSON.parse(text) : null;
+        
+        if (!res.ok) throw new Error(data?.error || `Request failed: ${res.status}`);
         return data;
     }
 

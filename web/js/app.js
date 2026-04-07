@@ -13,7 +13,7 @@ const App = (() => {
     let selectedRating = 0;
     let userReviewedPlaces = new Set();
     let activeSort = 'rating';
-    let activeFilters = new Set();
+    let activeFilters = new Set(['images']);
     let currentQuery = '';
     let pagination = { page: 1, total: 0, hasMore: false, loading: false };
 
@@ -83,24 +83,49 @@ const App = (() => {
         document.getElementById('viewHome').style.display = view === 'home' ? '' : 'none';
         document.getElementById('viewFavourites').style.display = view === 'favourites' ? '' : 'none';
         document.getElementById('viewMyReviews').style.display = view === 'myreviews' ? '' : 'none';
+        document.getElementById('viewAccount').style.display = view === 'account' ? '' : 'none';
 
-        document.querySelectorAll('.nav-tab').forEach(tab => {
+        document.querySelectorAll('.nav-item').forEach(tab => {
             tab.classList.toggle('active', tab.dataset.view === view);
         });
 
         if (view === 'favourites') loadFavourites();
         if (view === 'myreviews') loadMyReviews();
+        if (view === 'account') updateAccountView();
+
+        // Scroll to top on view change
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function updateNavAuth() {
         const loggedIn = Auth.isLoggedIn();
         const user = Auth.getUser();
-        document.getElementById('navAuth').style.display = loggedIn ? 'none' : '';
-        document.getElementById('navUser').style.display = loggedIn ? '' : 'none';
-        document.getElementById('tabFavourites').style.display = loggedIn ? '' : 'none';
-        document.getElementById('tabMyReviews').style.display = loggedIn ? '' : 'none';
+        
+        // Update account label/icon state if needed
+        const accountLabel = document.getElementById('accountLabel');
         if (loggedIn && user) {
-            document.getElementById('userGreeting').textContent = `Hi, ${user.name.split(' ')[0]} 👋`;
+            accountLabel.textContent = user.name.split(' ')[0];
+        } else {
+            accountLabel.textContent = 'Account';
+        }
+        
+        if (currentView === 'account') updateAccountView();
+    }
+
+    function updateAccountView() {
+        const loggedIn = Auth.isLoggedIn();
+        const user = Auth.getUser();
+        const profile = document.getElementById('accountProfile');
+        const guest = document.getElementById('accountGuest');
+        
+        if (loggedIn && user) {
+            profile.style.display = 'block';
+            guest.style.display = 'none';
+            document.getElementById('profileName').textContent = user.name;
+            document.getElementById('profileEmail').textContent = user.email;
+        } else {
+            profile.style.display = 'none';
+            guest.style.display = 'block';
         }
     }
 
@@ -109,14 +134,18 @@ const App = (() => {
     // =========================================
     function openModal(id) {
         document.getElementById(id).style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // Prevent scroll
     }
     function closeModal(id) {
         document.getElementById(id).style.display = 'none';
+        document.body.style.overflow = '';
     }
 
     function setupAuthModals() {
-        document.getElementById('btnLogin').addEventListener('click', () => openModal('loginModal'));
-        document.getElementById('btnRegister').addEventListener('click', () => openModal('registerModal'));
+        // Account view buttons
+        document.getElementById('btnAccLogin').addEventListener('click', () => openModal('loginModal'));
+        document.getElementById('btnAccRegister').addEventListener('click', () => openModal('registerModal'));
+        
         document.getElementById('closeLoginModal').addEventListener('click', () => closeModal('loginModal'));
         document.getElementById('closeRegisterModal').addEventListener('click', () => closeModal('registerModal'));
         document.getElementById('switchToRegister').addEventListener('click', (e) => {
@@ -142,7 +171,6 @@ const App = (() => {
             favouriteIds = new Set();
             userReviewedPlaces = new Set();
             updateNavAuth();
-            if (currentView !== 'home') switchView('home');
             showToast('Logged out. See you next time!', 'info');
         });
 
@@ -213,6 +241,18 @@ const App = (() => {
         } catch (_) { /* silent */ }
     }
 
+    const MATCHA_PLACEHOLDER = `
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:60%;height:60%;opacity:0.8">
+            <path d="M20 40 Q 20 80 50 80 Q 80 80 80 40 Z" fill="oklch(75% 0.2 148)" />
+            <path d="M80 45 Q 95 45 95 55 Q 95 65 80 65" fill="none" stroke="oklch(44% 0.09 148)" stroke-width="5" />
+            <circle cx="40" cy="55" r="3" fill="oklch(12% 0.02 148)" />
+            <circle cx="60" cy="55" r="3" fill="oklch(12% 0.02 148)" />
+            <path d="M45 65 Q 50 70 55 65" fill="none" stroke="oklch(12% 0.02 148)" stroke-width="2" stroke-linecap="round" />
+            <path d="M30 25 Q 35 15 40 25" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="3" stroke-linecap="round" />
+            <path d="M50 20 Q 55 10 60 20" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="3" stroke-linecap="round" />
+        </svg>
+    `;
+
     // =========================================
     // Place Cards
     // =========================================
@@ -220,32 +260,31 @@ const App = (() => {
         const isFav = favouriteIds.has(place.id);
         const ratingHtml = place.averageRating
             ? `${renderStars(place.averageRating)} <span class="rating-value">${place.averageRating}</span> <span class="review-count">(${place.reviewCount})</span>`
-            : `<span class="review-count" style="color:var(--text-light)">No reviews yet</span>`;
+            : `<span class="review-count">No reviews yet</span>`;
 
         const card = document.createElement('div');
-        card.className = 'place-card';
+        card.className = 'place-card stagger-item';
         card.innerHTML = `
-            <div class="place-card-image">
+            <div class="place-card-image" style="display:flex;align-items:center;justify-content:center;background:oklch(95% 0.02 148)">
                 ${place.imageUrl
-                    ? `<img src="${place.imageUrl}" alt="${escapeHtml(place.name)}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='🍵'" />`
-                    : '🍵'}
+                    ? `<img src="${place.imageUrl}" alt="${escapeHtml(place.name)}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML=App.placeholder" />`
+                    : MATCHA_PLACEHOLDER}
             </div>
+            <button class="btn-icon fav-btn ${isFav ? 'active' : ''}" data-id="${place.id}" title="${isFav ? 'Remove' : 'Save'}">
+                ${isFav ? '❤️' : '🤍'}
+            </button>
             <div class="place-card-body">
                 <div class="place-card-header">
                     <div class="place-card-name">${escapeHtml(place.name)}</div>
-                    <button class="btn-icon fav-btn ${isFav ? 'active' : ''}" data-id="${place.id}" title="${isFav ? 'Remove from favourites' : 'Add to favourites'}">
-                        ${isFav ? '❤️' : '🤍'}
-                    </button>
                 </div>
                 <div class="place-card-address">📍 ${escapeHtml(place.address || 'Toronto, ON')}</div>
                 <div class="place-card-rating">${ratingHtml}</div>
-                <div class="place-card-footer">
-                    <button class="btn btn-primary btn-sm view-details-btn" data-id="${place.id}">View Details</button>
-                </div>
             </div>
         `;
 
-        card.querySelector('.view-details-btn').addEventListener('click', () => openPlaceModal(place.id));
+        const openDetails = () => openPlaceModal(place.id);
+        card.querySelector('.place-card-image').addEventListener('click', openDetails);
+        card.querySelector('.place-card-body').addEventListener('click', openDetails);
 
         const favBtn = card.querySelector('.fav-btn');
         favBtn.addEventListener('click', async (e) => {
@@ -255,30 +294,79 @@ const App = (() => {
                 return;
             }
             const id = favBtn.dataset.id;
-            const wasActive = favBtn.classList.contains('active');
+            const isCurrentlyFav = favouriteIds.has(id);
+            
+            // UI INSTANT Optimistic update
+            favBtn.classList.add('heart-pop');
+            setTimeout(() => favBtn.classList.remove('heart-pop'), 400);
+
+            if (isCurrentlyFav) {
+                favouriteIds.delete(id);
+                favBtn.classList.remove('active');
+                favBtn.textContent = '🤍';
+            } else {
+                favouriteIds.add(id);
+                favBtn.classList.add('active');
+                favBtn.textContent = '❤️';
+            }
+
             try {
-                if (wasActive) {
+                if (isCurrentlyFav) {
                     await API.removeFavourite(id);
-                    favouriteIds.delete(id);
-                    favBtn.classList.remove('active');
-                    favBtn.textContent = '🤍';
-                    favBtn.title = 'Add to favourites';
                     showToast('Removed from favourites', 'info');
-                    gtag('event', 'remove_from_wishlist', { item_id: id });
                 } else {
                     await API.addFavourite(id);
-                    favouriteIds.add(id);
-                    favBtn.classList.add('active');
-                    favBtn.textContent = '❤️';
-                    favBtn.title = 'Remove from favourites';
-                    showToast('Added to favourites!', 'success');
-                    gtag('event', 'add_to_wishlist', { item_id: id });
+                    showToast('Saved to favourites!', 'success');
                 }
             } catch (err) {
                 showToast(err.message, 'error');
+                // Revert state ONLY on actual error
+                if (isCurrentlyFav) {
+                    favouriteIds.add(id);
+                    favBtn.classList.add('active');
+                    favBtn.textContent = '❤️';
+                } else {
+                    favouriteIds.delete(id);
+                    favBtn.classList.remove('active');
+                    favBtn.textContent = '🤍';
+                }
             }
         });
 
+        return card;
+    }
+
+    function createAdCard() {
+        const card = document.createElement('div');
+        card.className = 'ad-card stagger-item';
+        
+        const iframe = document.createElement('iframe');
+        iframe.style.width = '300px';
+        iframe.style.height = '250px';
+        iframe.style.border = 'none';
+        iframe.style.overflow = 'hidden';
+        
+        // Using srcdoc to create a mini-page for each ad
+        const adHtml = `
+            <html>
+                <body style="margin:0;padding:0;display:flex;justify-content:center;align-items:center;">
+                    <script type="text/javascript">
+                        atOptions = {
+                            'key' : '3148dbb04423ae6e3550b96c07cc151b',
+                            'format' : 'iframe',
+                            'height' : 250,
+                            'width' : 300,
+                            'params' : {}
+                        };
+                    </script>
+                    <script type="text/javascript" src="https://www.highperformanceformat.com/3148dbb04423ae6e3550b96c07cc151b/invoke.js"></script>
+                </body>
+            </html>
+        `;
+        
+        iframe.srcdoc = adHtml;
+        card.appendChild(iframe);
+        
         return card;
     }
 
@@ -306,7 +394,7 @@ const App = (() => {
         if (resetGrid) {
             pagination = { page: 1, total: 0, hasMore: false, loading: true };
             grid.innerHTML = '<div class="loading-spinner"></div>';
-            title.textContent = !currentQuery ? 'All Matcha Spots' : `Results for "${currentQuery}"`;
+            title.textContent = !currentQuery ? 'All Spots' : `"${currentQuery}"`;
         } else {
             pagination.loading = true;
             document.getElementById('loadMoreSpinner').style.display = 'block';
@@ -317,8 +405,6 @@ const App = (() => {
             pagination.total = data.total;
             pagination.hasMore = data.hasMore;
             pagination.loading = false;
-
-            if (currentQuery && resetGrid) gtag('event', 'search', { search_term: currentQuery, results_count: data.total });
 
             document.getElementById('placesCount').textContent =
                 `${data.total} spot${data.total !== 1 ? 's' : ''}`;
@@ -331,19 +417,27 @@ const App = (() => {
                     <div class="empty-state">
                         <span class="empty-state-icon">🍵</span>
                         <h3>No spots found</h3>
-                        <p>${activeFilters.size > 0 ? 'Try removing some filters.' : 'Try a different search term.'}</p>
+                        <p>Try a different search term.</p>
                     </div>`;
                 return;
             }
 
-            data.items.forEach(place => grid.appendChild(createPlaceCard(place)));
+            data.items.forEach((place, index) => {
+                grid.appendChild(createPlaceCard(place));
+                
+                // Add AD every 3 items
+                const currentPlacesCount = grid.querySelectorAll('.place-card').length;
+                if (currentPlacesCount % 3 === 0) {
+                    grid.appendChild(createAdCard());
+                }
+            });
         } catch (err) {
             pagination.loading = false;
             document.getElementById('loadMoreSpinner').style.display = 'none';
             if (resetGrid) grid.innerHTML = `
                 <div class="empty-state">
                     <span class="empty-state-icon">⚠️</span>
-                    <h3>Could not load places</h3>
+                    <h3>Error</h3>
                     <p>${escapeHtml(err.message)}</p>
                 </div>`;
         }
@@ -478,10 +572,10 @@ const App = (() => {
 
             content.innerHTML = `
                 <div class="place-detail-header">
-                    <div class="place-detail-icon">
+                    <div class="place-detail-icon" style="display:flex;align-items:center;justify-content:center;background:oklch(95% 0.02 148)">
                         ${place.imageUrl
-                            ? `<img src="${place.imageUrl}" alt="${escapeHtml(place.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.parentElement.innerHTML='🍵'" />`
-                            : '🍵'}
+                            ? `<img src="${place.imageUrl}" alt="${escapeHtml(place.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.parentElement.innerHTML=App.placeholder" />`
+                            : MATCHA_PLACEHOLDER}
                     </div>
                     <div class="place-detail-info">
                         <div class="place-detail-name">${escapeHtml(place.name)}</div>
@@ -644,14 +738,13 @@ const App = (() => {
         document.getElementById('submitReviewBtn').addEventListener('click', async () => {
             const body = document.getElementById('reviewBody').value.trim();
             if (selectedRating === 0) { showToast('Please select a star rating.', 'error'); return; }
-            if (!body) { showToast('Please write a review.', 'error'); return; }
 
             const btn = document.getElementById('submitReviewBtn');
             btn.disabled = true;
             btn.innerHTML = '<span class="loading-inline"></span> Submitting…';
 
             try {
-                await API.createReview(placeId, selectedRating, body);
+                await API.createReview(placeId, selectedRating, body || "");
                 userReviewedPlaces.add(placeId);
                 showToast('Review submitted!', 'success');
                 gtag('event', 'submit_review', { place_id: placeId, rating: selectedRating });
@@ -787,9 +880,16 @@ const App = (() => {
         setupSortFilter();
         setupInfiniteScroll();
 
-        // Nav tab switching
-        document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.addEventListener('click', () => switchView(tab.dataset.view));
+        // Bottom Nav switching
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => switchView(item.dataset.view));
+        });
+
+        // Search toggle (for mobile quick access)
+        document.getElementById('btnSearchToggle').addEventListener('click', () => {
+            if (currentView !== 'home') switchView('home');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.getElementById('searchInput').focus();
         });
 
         // Close place modal
@@ -813,6 +913,9 @@ const App = (() => {
     }
 
     document.addEventListener('DOMContentLoaded', init);
+
+    // Export App to window for inline onclick handlers in generated HTML
+    window.App = { showToast, searchPlaces, openPlaceModal, placeholder: MATCHA_PLACEHOLDER };
 
     return { showToast, searchPlaces, openPlaceModal };
 })();

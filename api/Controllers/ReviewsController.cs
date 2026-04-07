@@ -28,9 +28,6 @@ public class ReviewsController : ControllerBase
         if (req.Rating < 1 || req.Rating > 5)
             return BadRequest(new { error = "Rating must be between 1 and 5." });
 
-        if (string.IsNullOrWhiteSpace(req.Body))
-            return BadRequest(new { error = "Review body is required." });
-
         var place = await _db.Places.FindAsync(placeId);
         if (place == null) return NotFound(new { error = "Place not found." });
 
@@ -43,7 +40,7 @@ public class ReviewsController : ControllerBase
             UserId = userId,
             PlaceId = placeId,
             Rating = req.Rating,
-            Body = req.Body.Trim(),
+            Body = req.Body?.Trim() ?? string.Empty,
             Status = "published",
             CreatedAt = DateTime.UtcNow
         };

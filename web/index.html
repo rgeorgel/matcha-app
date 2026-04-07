@@ -143,39 +143,71 @@
 </head>
 <body>
 
-  <!-- Navigation -->
-  <nav class="navbar">
-    <div class="container nav-inner">
-      <a href="/" class="nav-brand">Rate Matcha</a>
-      <div class="nav-tabs" id="navTabs">
-        <button class="nav-tab active" data-view="home">Discover</button>
-        <button class="nav-tab" data-view="favourites" id="tabFavourites" style="display:none">Favourites</button>
-        <button class="nav-tab" data-view="myreviews" id="tabMyReviews" style="display:none">My Reviews</button>
-      </div>
-      <div class="nav-auth" id="navAuth">
-        <button class="btn btn-outline" id="btnLogin">Log In</button>
-        <button class="btn btn-primary" id="btnRegister">Sign Up</button>
-      </div>
-      <div class="nav-user" id="navUser" style="display:none">
-        <span class="user-greeting" id="userGreeting"></span>
-        <button class="btn btn-outline btn-sm" id="btnLogout">Log Out</button>
+  <!-- Navigation (Top Header) -->
+  <header class="app-header">
+    <div class="container header-inner">
+      <a href="/" class="app-brand">Rate <em>Matcha</em></a>
+      <div class="header-actions">
+        <button class="btn-icon" id="btnSearchToggle" title="Search">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
       </div>
     </div>
+  </header>
+
+  <!-- Bottom Navigation (Mobile First) -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-view="home">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Discover</span>
+    </button>
+    <button class="nav-item" data-view="favourites" id="tabFavourites">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+      <span>Favs</span>
+    </button>
+    <button class="nav-item" data-view="myreviews" id="tabMyReviews">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></svg>
+      <span>Reviews</span>
+    </button>
+    <button class="nav-item" data-view="account" id="tabAccount">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+      <span id="accountLabel">Account</span>
+    </button>
   </nav>
 
   <!-- Main content -->
-  <main>
-    <!-- Home / Discover view -->
+  <main class="main-content">
     <div id="viewHome">
-      <section class="hero">
-        <div class="container">
-          <p class="hero-eyebrow">Toronto · Matcha Community</p>
-          <h1>Find Your Perfect <em>Matcha</em></h1>
-          <p>Discover Toronto's finest matcha cafés, rated by the people who drink it every day.</p>
-          <div class="search-bar">
-            <input type="text" id="searchInput" placeholder="Search matcha spots in Toronto…" />
-            <button class="btn btn-primary" id="btnSearch">Search</button>
-            <button class="btn btn-outline" id="btnLocation" title="Use my location">Near Me</button>
+      <section class="hero futuristic-hero">
+        <div class="hero-bg-canvas">
+          <div class="blob blob-1"></div>
+          <div class="blob blob-2"></div>
+          <div class="blob blob-3"></div>
+        </div>
+        <div class="container hero-content">
+          <div class="hero-badge animate-reveal">
+            <span class="pulse-dot"></span>
+            Toronto · Community · v2.0
+          </div>
+          <h1 class="hero-title animate-reveal-delayed">
+            Find Your <br>
+            <span class="text-glow">Perfect</span> <em>Matcha</em>
+          </h1>
+          <p class="hero-subtitle animate-reveal-more-delayed">
+            Discover Toronto's finest matcha cafés, <br>rated by the community.
+          </p>
+          <div class="search-bar-wrap animate-reveal-final">
+            <div class="search-bar futuristic-search" id="searchBar">
+              <input type="text" id="searchInput" placeholder="Search the matcha grid…" />
+              <div class="search-actions">
+                <button class="btn btn-primary btn-icon-only" id="btnSearch">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </button>
+                <button class="btn btn-outline btn-icon-only" id="btnLocation" title="Use my location">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -183,26 +215,24 @@
       <section class="places-section">
         <div class="container">
           <div class="section-header">
-            <h2 id="placesTitle">Matcha Spots</h2>
+            <h2 id="placesTitle">All Spots</h2>
             <span class="places-count" id="placesCount"></span>
           </div>
 
-          <div class="sort-filter-bar">
+          <div class="filter-scroll">
             <div class="sort-filter-group">
-              <label class="sort-filter-label">Sort by</label>
               <div class="sort-filter-pills" id="sortPills">
                 <button class="pill active" data-sort="rating">Best Rating</button>
-                <button class="pill" data-sort="name">Name A–Z</button>
+                <button class="pill" data-sort="name">A–Z</button>
                 <button class="pill" data-sort="distance">Closest</button>
               </div>
             </div>
             <div class="sort-filter-group">
-              <label class="sort-filter-label">Filter</label>
               <div class="sort-filter-pills" id="filterPills">
-                <button class="pill" data-filter="images">Has Photo</button>
-                <button class="pill" data-filter="reviewed">Has Reviews</button>
-                <button class="pill" data-filter="unreviewed">Not Yet Reviewed</button>
-                <button class="pill" data-filter="top">Top Rated 4+</button>
+                <button class="pill active" data-filter="images">Has Photo</button>
+                <button class="pill" data-filter="reviewed">Reviewed</button>
+                <button class="pill" data-filter="unreviewed">Not Rated</button>
+                <button class="pill" data-filter="top">Top 4.0+</button>
               </div>
             </div>
           </div>
@@ -220,7 +250,7 @@
 
     <!-- Favourites view -->
     <div id="viewFavourites" style="display:none">
-      <section class="places-section" style="padding-top: calc(var(--nav-height) + 2rem)">
+      <section class="places-section page-top">
         <div class="container">
           <div class="section-header">
             <h2>My Favourites</h2>
@@ -232,12 +262,46 @@
 
     <!-- My Reviews view -->
     <div id="viewMyReviews" style="display:none">
-      <section class="places-section" style="padding-top: calc(var(--nav-height) + 2rem)">
+      <section class="places-section page-top">
         <div class="container">
           <div class="section-header">
             <h2>My Reviews</h2>
           </div>
           <div id="myReviewsList"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Account view (New) -->
+    <div id="viewAccount" style="display:none">
+      <section class="places-section page-top">
+        <div class="container">
+          <div class="section-header">
+            <h2>Account</h2>
+          </div>
+          <div id="accountContent">
+            <div class="account-card" id="accountProfile" style="display:none">
+              <div class="account-header">
+                <div class="account-avatar" id="accountAvatar">🍵</div>
+                <div class="account-info">
+                  <h3 id="profileName">User Name</h3>
+                  <p id="profileEmail">user@example.com</p>
+                </div>
+              </div>
+              <button class="btn btn-outline btn-full" id="btnLogout">Log Out</button>
+            </div>
+            <div class="account-guest" id="accountGuest">
+              <div class="empty-state">
+                <span class="empty-state-icon">🍵</span>
+                <h3>Join the community</h3>
+                <p>Sign in to save favourites and write reviews.</p>
+                <div class="mt-2" style="display:flex;gap:0.5rem;flex-direction:column">
+                  <button class="btn btn-primary btn-full" id="btnAccLogin">Log In</button>
+                  <button class="btn btn-outline btn-full" id="btnAccRegister">Sign Up</button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </div>
