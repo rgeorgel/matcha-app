@@ -345,7 +345,7 @@ const App = (() => {
         iframe.style.height = '250px';
         iframe.style.border = 'none';
         iframe.style.overflow = 'hidden';
-        iframe.sandbox = 'allow-scripts allow-popups';
+        iframe.sandbox = 'allow-scripts allow-popups allow-same-origin allow-popups-to-escape-sandbox';
         
         // Using srcdoc to create a mini-page for each ad
         const adHtml = `
